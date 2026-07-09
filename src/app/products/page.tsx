@@ -6,10 +6,10 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Supabase env vars not configured');
+  return createClient(url, key);
 }
 
 function mapRow(row: any): Product {
@@ -32,15 +32,19 @@ function mapRow(row: any): Product {
 }
 
 async function fetchProducts(): Promise<Product[]> {
-  const { data, error } = await db()
-    .from('products')
-    .select('id, name, description, base_price, type, photo_slots, images, badge, rating, review_count, occasion, featured')
-    .eq('status', 'published')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await db()
+      .from('products')
+      .select('id, name, description, base_price, type, photo_slots, images, badge, rating, review_count, occasion, featured')
+      .eq('status', 'published')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
 
-  if (error || !data) return [];
-  return data.map(mapRow);
+    if (error || !data) return [];
+    return data.map(mapRow);
+  } catch {
+    return [];
+  }
 }
 
 export default async function ProductsPage() {

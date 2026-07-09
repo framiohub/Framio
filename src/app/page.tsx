@@ -10,35 +10,40 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 async function getFeaturedProducts(): Promise<Product[]> {
-  const db = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-  const { data } = await db
-    .from('products')
-    .select('id, name, description, base_price, type, photo_slots, images, badge, rating, review_count, occasion, featured')
-    .eq('status', 'published')
-    .eq('is_active', true)
-    .eq('featured', true)
-    .order('created_at', { ascending: false })
-    .limit(3);
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) return [];
 
-  return (data ?? []).map(row => ({
-    id: row.id,
-    name: row.name,
-    description: row.description ?? '',
-    basePrice: Number(row.base_price ?? 0),
-    type: row.type ?? 'single',
-    sizes: [],
-    materials: [],
-    images: row.images ?? [],
-    badge: row.badge || undefined,
-    rating: Number(row.rating ?? 0),
-    reviewCount: Number(row.review_count ?? 0),
-    occasion: row.occasion ?? [],
-    photoSlots: Number(row.photo_slots ?? 1),
-    featured: row.featured ?? false,
-  }));
+    const db = createClient(url, key);
+    const { data } = await db
+      .from('products')
+      .select('id, name, description, base_price, type, photo_slots, images, badge, rating, review_count, occasion, featured')
+      .eq('status', 'published')
+      .eq('is_active', true)
+      .eq('featured', true)
+      .order('created_at', { ascending: false })
+      .limit(3);
+
+    return (data ?? []).map(row => ({
+      id: row.id,
+      name: row.name,
+      description: row.description ?? '',
+      basePrice: Number(row.base_price ?? 0),
+      type: row.type ?? 'single',
+      sizes: [],
+      materials: [],
+      images: row.images ?? [],
+      badge: row.badge || undefined,
+      rating: Number(row.rating ?? 0),
+      reviewCount: Number(row.review_count ?? 0),
+      occasion: row.occasion ?? [],
+      photoSlots: Number(row.photo_slots ?? 1),
+      featured: row.featured ?? false,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 const OCCASIONS = [
