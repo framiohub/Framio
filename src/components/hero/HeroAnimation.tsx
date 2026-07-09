@@ -85,13 +85,13 @@ function HeroDescription() {
 function HeroButtons({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex gap-2">
-      <Button size={compact ? 'default' : 'lg'} className={`flex-1 justify-center text-center${compact ? ' h-12 text-sm' : ''}`} asChild>
+      <Button size={compact ? 'sm' : 'lg'} className={`flex-1 justify-center text-center${compact ? ' h-12 text-sm' : ''}`} asChild>
         <Link href="/products">
           Shop All Frames
           {!compact && <ArrowRight size={15} className="ml-1" />}
         </Link>
       </Button>
-      <Button variant="outline" size={compact ? 'default' : 'lg'} className={`flex-1 justify-center text-center${compact ? ' h-12 text-sm' : ''}`} asChild>
+      <Button variant="outline" size={compact ? 'sm' : 'lg'} className={`flex-1 justify-center text-center${compact ? ' h-12 text-sm' : ''}`} asChild>
         <Link href="/products">Browse Collection</Link>
       </Button>
     </div>
