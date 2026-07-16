@@ -45,12 +45,18 @@ export default function CartPage() {
             return (
               <div key={item.id} className="bg-white rounded-2xl border border-[#E8DDD6] p-4 sm:p-5">
                 <div className="flex gap-4">
-                  {/* Product image */}
+                  {/* Product image / custom photo */}
                   <div
                     className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 border-4 flex items-center justify-center bg-[#F5EDE5] relative"
                     style={{ borderColor: item.materialColor || '#5C3D2E' }}
                   >
-                    {image ? (
+                    {item.customization?.photoUrl ? (
+                      <img
+                        src={item.customization.photoUrl}
+                        alt="Custom"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : image ? (
                       <Image src={image} alt={item.product.name} fill className="object-cover" sizes="96px" />
                     ) : (
                       <ImageIcon size={20} className="text-[#7A6A64]/40" />
@@ -62,11 +68,21 @@ export default function CartPage() {
                     <h3 className="font-semibold text-[#2D1F1A] text-sm sm:text-base leading-tight mb-1">
                       {item.product.name}
                     </h3>
-                    <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-[#7A6A64] mb-3">
+                    <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-[#7A6A64] mb-1">
                       {item.selectedSizeLabel && <span>{item.selectedSizeLabel}</span>}
                       {item.selectedSizeLabel && item.selectedMaterialLabel && <span>·</span>}
                       {item.selectedMaterialLabel && <span>{item.selectedMaterialLabel}</span>}
                     </div>
+                    {item.customization && (item.customization.name || item.customization.date || item.customization.message) && (
+                      <p className="text-xs text-[#7A6A64] italic mb-1 truncate">
+                        {[item.customization.name, item.customization.date, item.customization.message].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                    {item.customization && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#C4634F] bg-[#FFF4F2] border border-[#C4634F]/20 px-2 py-0.5 rounded-full mb-2">
+                        ✨ Customized
+                      </span>
+                    )}
 
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1 border border-[#E8DDD6] rounded-xl">

@@ -33,6 +33,13 @@ export interface Product {
   featured?: boolean;
 }
 
+export interface CartCustomization {
+  photoUrl?: string;
+  name?: string;
+  date?: string;
+  message?: string;
+}
+
 export interface CartItem {
   id: string;
   product: Product;
@@ -43,6 +50,7 @@ export interface CartItem {
   materialColor: string;
   quantity: number;
   unitPrice: number;
+  customization?: CartCustomization;
 }
 
 export interface Order {

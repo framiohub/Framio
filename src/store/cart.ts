@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { CartItem, Product } from '@/types';
+import { CartItem, CartCustomization, Product } from '@/types';
 
 interface AddItemOptions {
   selectedSize: string;
@@ -11,6 +11,8 @@ interface AddItemOptions {
   selectedMaterialLabel: string;
   materialColor: string;
   unitPrice: number;
+  customization?: CartCustomization;
+  _idOverride?: string;
 }
 
 interface CartStore {
@@ -29,7 +31,8 @@ export const useCartStore = create<CartStore>()(
       items: [],
 
       addItem: (product, options) => {
-        const id = `${product.id}__${options.selectedSize}__${options.selectedMaterial}`;
+        const { _idOverride, customization, ...cartFields } = options;
+        const id = _idOverride ?? `${product.id}__${options.selectedSize}__${options.selectedMaterial}`;
         set(state => {
           const existing = state.items.find(item => item.id === id);
           if (existing) {
@@ -39,7 +42,9 @@ export const useCartStore = create<CartStore>()(
               ),
             };
           }
-          return { items: [...state.items, { id, product, ...options, quantity: 1 }] };
+          const newItem: CartItem = { id, product, ...cartFields, quantity: 1 };
+          if (customization) newItem.customization = customization;
+          return { items: [...state.items, newItem] };
         });
       },
 
