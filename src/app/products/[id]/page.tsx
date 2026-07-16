@@ -136,9 +136,9 @@ export default async function ProductDetailPage({
 
           <p className="text-[#7A6A64] leading-relaxed mb-5">{product.description}</p>
 
-          {/* Starting price (shown above the selector) */}
+          {/* Price */}
           <div className="mb-6">
-            <p className="text-xs text-[#7A6A64] mb-1">Starting from</p>
+            <p className="text-xs text-[#7A6A64] mb-1">{product.sizes.length > 1 ? 'Starting from' : 'Price'}</p>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-[#C4634F]">{formatPrice(lowestPrice)}</span>
               {highestPrice > lowestPrice && (
@@ -147,7 +147,17 @@ export default async function ProductDetailPage({
             </div>
           </div>
 
-          {/* Size + Material + Add to Cart — all client-side */}
+          {/* Frame size — server-rendered so it always shows on every viewport */}
+          {product.sizes.length === 1 && (
+            <div className="mb-5">
+              <p className="text-xs font-semibold text-[#7A6A64] uppercase tracking-wider mb-2">Frame Size</p>
+              <span className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-xl border-2 border-[#C4634F] bg-[#C4634F]/5 text-[#2D1F1A]">
+                {product.sizes[0].label}
+              </span>
+            </div>
+          )}
+
+          {/* Material + quantity + Add to Cart — client-side */}
           <AddToCartSection product={product} />
 
           {/* Trust signals */}
@@ -178,7 +188,7 @@ export default async function ProductDetailPage({
             {[
               ['Type',          product.type.replace(/-/g, ' ')],
               ['Photos needed', product.photoSlots === 1 ? '1 photo' : `${product.photoSlots} photos`],
-              ...(product.sizes.length > 0     ? [['Available sizes', product.sizes.map(s => s.label).join(', ')]] : []),
+              ...(product.sizes.length > 0 ? [[product.sizes.length === 1 ? 'Size' : 'Available sizes', product.sizes.map(s => s.label).join(', ')]] : []),
               ...(product.materials.length > 0  ? [['Finishes',       product.materials.map(m => m.label).join(', ')]] : []),
               ['Made in', 'India 🇮🇳'],
             ].map(([dt, dd]) => (

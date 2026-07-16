@@ -39,8 +39,8 @@ export default async function AdminOrdersPage({
   const statuses = ['all', 'processing', 'printing', 'packed', 'shipped', 'delivered', 'cancelled'];
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="p-4 md:p-6">
+      <div className="mb-5 md:mb-6 flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-[#2D1F1A]">Orders</h1>
           <p className="text-[#7A6A64] text-sm">{orders?.length || 0} total orders</p>

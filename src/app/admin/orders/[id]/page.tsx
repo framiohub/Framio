@@ -184,7 +184,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
   const addr = order.shipping_address;
 
   return (
-    <div className="p-6 max-w-5xl">
+    <div className="p-4 md:p-6 max-w-5xl">
       <Link href="/admin/orders" className="flex items-center gap-2 text-sm text-[#7A6A64] hover:text-[#2D1F1A] mb-5">
         <ArrowLeft size={14} /> Back to Orders
       </Link>
@@ -200,29 +200,33 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
           </div>
           <p className="text-sm text-[#7A6A64] mt-1">{new Date(order.created_at).toLocaleString('en-IN')}</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <select value={newStatus} onChange={e => setNewStatus(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-[#E8DDD6] text-sm focus:outline-none focus:ring-2 focus:ring-[#C4634F] capitalize bg-white">
-            {ORDER_STATUSES.map(s => <option key={s} value={s} className="capitalize">{s}</option>)}
-          </select>
-          <button onClick={updateStatus} disabled={saving}
-            className="flex items-center gap-1.5 h-9 px-4 bg-[#C4634F] hover:bg-[#a8513f] text-white rounded-xl text-sm font-medium disabled:opacity-60">
-            {saving ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />} Update
-          </button>
-          <button onClick={() => setShowCourier(true)}
-            className="flex items-center gap-1.5 h-9 px-4 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-sm font-medium">
-            <Truck size={12} /> Courier
-          </button>
-          <button onClick={printInvoice}
-            className="flex items-center gap-1.5 h-9 px-4 bg-[#F5EDE5] text-[#7A6A64] hover:bg-[#E8DDD6] rounded-xl text-sm font-medium">
-            <FileText size={12} /> Invoice
-          </button>
-          {order.payment_status === 'paid' && order.status !== 'cancelled' && (
-            <button onClick={() => setShowRefund(true)}
-              className="flex items-center gap-1.5 h-9 px-4 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-sm font-medium">
-              <RotateCcw size={12} /> Refund
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <select value={newStatus} onChange={e => setNewStatus(e.target.value)}
+              className="flex-1 sm:flex-none h-9 px-3 rounded-xl border border-[#E8DDD6] text-sm focus:outline-none focus:ring-2 focus:ring-[#C4634F] capitalize bg-white">
+              {ORDER_STATUSES.map(s => <option key={s} value={s} className="capitalize">{s}</option>)}
+            </select>
+            <button onClick={updateStatus} disabled={saving}
+              className="flex items-center gap-1.5 h-9 px-4 bg-[#C4634F] hover:bg-[#a8513f] text-white rounded-xl text-sm font-medium disabled:opacity-60 flex-shrink-0">
+              {saving ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />} Update
             </button>
-          )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowCourier(true)}
+              className="flex items-center gap-1.5 h-9 px-4 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-sm font-medium">
+              <Truck size={12} /> Courier
+            </button>
+            <button onClick={printInvoice}
+              className="flex items-center gap-1.5 h-9 px-4 bg-[#F5EDE5] text-[#7A6A64] hover:bg-[#E8DDD6] rounded-xl text-sm font-medium">
+              <FileText size={12} /> Invoice
+            </button>
+            {order.payment_status === 'paid' && order.status !== 'cancelled' && (
+              <button onClick={() => setShowRefund(true)}
+                className="flex items-center gap-1.5 h-9 px-4 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-sm font-medium">
+                <RotateCcw size={12} /> Refund
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

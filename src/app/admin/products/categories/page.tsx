@@ -91,7 +91,7 @@ export default function CategoriesPage() {
   };
 
   return (
-    <div className="p-6 max-w-4xl">
+    <div className="p-4 md:p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Link href="/admin/products" className="p-1.5 hover:bg-[#E8DDD6] rounded-lg transition-colors">

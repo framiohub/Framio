@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowLeft, Save, Globe, Eye, Plus, Trash2, GripVertical,
+  ArrowLeft, Save, Globe, Eye, Plus,
   Image as ImageIcon, Loader2, X, Check, AlertCircle, Upload, Link as LinkIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -77,8 +77,11 @@ const defaultForm: ProductFormData = {
   name: '', slug: '', description: '', type: 'single', photoSlots: 1,
   occasions: [],
   basePrice: 0, stockQuantity: 0,
-  sizes: [{ label: '6" × 8"', value: '6x8', price: 599, stockQuantity: 50 }],
-  materials: [{ label: 'Walnut Wood', value: 'wood-walnut', priceAdder: 0, color: '#5C3D2E' }],
+  sizes: [{ label: '8″ × 12″ (A4)', value: '8x12', price: 0, stockQuantity: 0 }],
+  materials: [
+    { label: 'Black', value: 'black', priceAdder: 0, color: '#1C1C1C' },
+    { label: 'Brown', value: 'brown', priceAdder: 0, color: '#7A4A2E' },
+  ],
   images: [],
   seoTitle: '', seoDescription: '',
   status: 'draft', badge: '', featured: false, isActive: true,
@@ -138,15 +141,7 @@ export default function ProductForm({ initialData, productId }: ProductFormProps
     }
   };
 
-  /* ── Sizes ── */
-  const addSize       = () => set('sizes', [...form.sizes, { label: '', value: '', price: 0, stockQuantity: 0 }]);
-  const removeSize    = (i: number) => set('sizes', form.sizes.filter((_, idx) => idx !== i));
-  const updateSize    = (i: number, field: keyof SizeVariant, val: any) =>
-    set('sizes', form.sizes.map((s, idx) => idx === i ? { ...s, [field]: val } : s));
-
-  /* ── Materials ── */
-  const addMaterial    = () => set('materials', [...form.materials, { label: '', value: '', priceAdder: 0, color: '#888888' }]);
-  const removeMaterial = (i: number) => set('materials', form.materials.filter((_, idx) => idx !== i));
+  /* ── Materials (Black / Brown price adder) ── */
   const updateMaterial = (i: number, field: keyof MaterialVariant, val: any) =>
     set('materials', form.materials.map((m, idx) => idx === i ? { ...m, [field]: val } : m));
 
@@ -213,7 +208,7 @@ export default function ProductForm({ initialData, productId }: ProductFormProps
     <div className="min-h-screen bg-[#F5EDE5]">
 
       {/* ── Sticky top bar ── */}
-      <div className="sticky top-0 z-20 bg-white border-b border-[#E8DDD6] px-6 py-3 flex items-center justify-between gap-4">
+      <div className="sticky top-0 z-20 bg-white border-b border-[#E8DDD6] px-4 md:px-6 py-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={() => router.push('/admin/products')}
             className="p-1.5 hover:bg-[#F5EDE5] rounded-lg transition-colors flex-shrink-0">
@@ -249,7 +244,7 @@ export default function ProductForm({ initialData, productId }: ProductFormProps
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-5 md:py-6 grid grid-cols-1 lg:grid-cols-3 gap-5 md:gap-6">
 
         {/* ── Left: tabs ── */}
         <div className="lg:col-span-2 space-y-5">
@@ -304,7 +299,7 @@ export default function ProductForm({ initialData, productId }: ProductFormProps
                       placeholder="Describe the product…" />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-semibold text-[#7A6A64] uppercase tracking-wider mb-1.5 block">Frame Type</label>
                       <select className={inputCls()} value={form.type} onChange={e => set('type', e.target.value)}>
@@ -342,7 +337,7 @@ export default function ProductForm({ initialData, productId }: ProductFormProps
               {/* ── Pricing & Stock ── */}
               {tab === 'Pricing & Stock' && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-semibold text-[#7A6A64] uppercase tracking-wider mb-1.5 block">Base Price (₹) *</label>
                       <input type="number" min={0} step={1} className={inputCls('basePrice')} value={form.basePrice}
@@ -360,9 +355,9 @@ export default function ProductForm({ initialData, productId }: ProductFormProps
                     <p className="text-xs text-[#7A6A64] mb-1">Price Preview</p>
                     <p className="text-lg font-bold text-[#C4634F]">
                       ₹{form.basePrice.toFixed(2)}
-                      {form.sizes.length > 0 && (
+                      {form.materials.some(m => m.priceAdder > 0) && (
                         <span className="text-sm font-normal text-[#7A6A64] ml-2">
-                          — up to ₹{Math.max(...form.sizes.map(s => s.price)).toFixed(2)} (with sizes)
+                          — up to ₹{(form.basePrice + Math.max(...form.materials.map(m => m.priceAdder))).toFixed(2)} (with colour)
                         </span>
                       )}
                     </p>
@@ -374,91 +369,49 @@ export default function ProductForm({ initialData, productId }: ProductFormProps
               {tab === 'Variants' && (
                 <div className="space-y-6">
 
-                  {/* Sizes */}
+                  {/* Fixed Size */}
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-[#2D1F1A] text-sm">Sizes</h3>
-                      <button onClick={addSize}
-                        className="flex items-center gap-1 text-xs text-[#C4634F] hover:underline font-medium">
-                        <Plus size={13} /> Add Size
-                      </button>
-                    </div>
-                    <div className="space-y-2">
-                      {form.sizes.length === 0 && (
-                        <p className="text-sm text-[#7A6A64] text-center py-4">No sizes yet.</p>
-                      )}
-                      {form.sizes.map((size, i) => (
-                        <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                          <div className="col-span-1 text-[#E8DDD6]"><GripVertical size={14} /></div>
-                          <input className={cn(inputCls(), 'col-span-4')} placeholder='Label e.g. 8" × 10"'
-                            value={size.label} onChange={e => updateSize(i, 'label', e.target.value)} />
-                          <input className={cn(inputCls(), 'col-span-2')} placeholder="8x10"
-                            value={size.value} onChange={e => updateSize(i, 'value', e.target.value)} />
-                          <div className="col-span-2 relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7A6A64] text-xs">₹</span>
-                            <input type="number" className={cn(inputCls(), 'pl-7')} placeholder="Price"
-                              value={size.price} onChange={e => updateSize(i, 'price', parseFloat(e.target.value) || 0)} />
-                          </div>
-                          <input type="number" className={cn(inputCls(), 'col-span-2')} placeholder="Stock"
-                            value={size.stockQuantity} onChange={e => updateSize(i, 'stockQuantity', parseInt(e.target.value) || 0)} />
-                          <button onClick={() => removeSize(i)} className="col-span-1 text-red-400 hover:text-red-600 flex justify-center">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      ))}
-                      {form.sizes.length > 0 && (
-                        <div className="grid grid-cols-12 gap-2 text-[10px] text-[#7A6A64] px-1 mt-1">
-                          <div className="col-span-1" /><div className="col-span-4">Label</div>
-                          <div className="col-span-2">Value</div><div className="col-span-2">Price (₹)</div>
-                          <div className="col-span-2">Stock</div>
-                        </div>
-                      )}
+                    <h3 className="font-semibold text-[#2D1F1A] text-sm mb-3">Frame Size</h3>
+                    <div className="flex items-center gap-3 p-4 bg-[#F5EDE5] rounded-xl border border-[#E8DDD6]">
+                      <div className="w-10 h-10 rounded-lg bg-white border border-[#E8DDD6] flex items-center justify-center flex-shrink-0">
+                        <span className="text-[10px] font-bold text-[#C4634F] leading-tight text-center">A4</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[#2D1F1A]">8″ × 12″ (A4)</p>
+                        <p className="text-xs text-[#7A6A64]">Fixed size — applies to all frames</p>
+                      </div>
+                      <span className="px-2.5 py-1 text-xs font-medium bg-white border border-[#C4634F]/40 text-[#C4634F] rounded-full flex-shrink-0">
+                        Default
+                      </span>
                     </div>
                   </div>
 
-                  {/* Materials */}
+                  {/* Frame Colour — Black & Brown only */}
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-[#2D1F1A] text-sm">Materials / Finishes</h3>
-                      <button onClick={addMaterial}
-                        className="flex items-center gap-1 text-xs text-[#C4634F] hover:underline font-medium">
-                        <Plus size={13} /> Add Material
-                      </button>
-                    </div>
+                    <h3 className="font-semibold text-[#2D1F1A] text-sm mb-1">Frame Colour</h3>
+                    <p className="text-xs text-[#7A6A64] mb-3">Set an extra charge per colour (0 = same as base price)</p>
                     <div className="space-y-2">
-                      {form.materials.length === 0 && (
-                        <p className="text-sm text-[#7A6A64] text-center py-4">No materials yet.</p>
-                      )}
                       {form.materials.map((mat, i) => (
-                        <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                          <div className="col-span-1 text-[#E8DDD6]"><GripVertical size={14} /></div>
-                          <input className={cn(inputCls(), 'col-span-3')} placeholder="e.g. Walnut Wood"
-                            value={mat.label} onChange={e => updateMaterial(i, 'label', e.target.value)} />
-                          <input className={cn(inputCls(), 'col-span-3')} placeholder="wood-walnut"
-                            value={mat.value} onChange={e => updateMaterial(i, 'value', e.target.value)} />
-                          <div className="col-span-2 relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7A6A64] text-xs">+₹</span>
-                            <input type="number" className={cn(inputCls(), 'pl-8')} placeholder="Extra"
-                              value={mat.priceAdder} onChange={e => updateMaterial(i, 'priceAdder', parseFloat(e.target.value) || 0)} />
+                        <div key={i} className="flex items-center gap-3 p-3 bg-white border border-[#E8DDD6] rounded-xl">
+                          <div
+                            className="w-8 h-8 rounded-full border-2 border-white shadow flex-shrink-0"
+                            style={{ backgroundColor: mat.color, boxShadow: '0 0 0 1px #E8DDD6' }}
+                          />
+                          <span className="text-sm font-semibold text-[#2D1F1A] flex-1">{mat.label}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-[#7A6A64] font-medium">+₹</span>
+                            <input
+                              type="number"
+                              min={0}
+                              step={1}
+                              className={cn(inputCls(), 'w-24 text-right')}
+                              placeholder="0"
+                              value={mat.priceAdder}
+                              onChange={e => updateMaterial(i, 'priceAdder', parseFloat(e.target.value) || 0)}
+                            />
                           </div>
-                          <div className="col-span-2 flex items-center gap-2">
-                            <input type="color" value={mat.color}
-                              onChange={e => updateMaterial(i, 'color', e.target.value)}
-                              className="w-8 h-8 rounded cursor-pointer border border-[#E8DDD6] p-0.5" />
-                            <span className="text-xs text-[#7A6A64] font-mono">{mat.color}</span>
-                          </div>
-                          <button onClick={() => removeMaterial(i)} className="col-span-1 text-red-400 hover:text-red-600 flex justify-center">
-                            <Trash2 size={14} />
-                          </button>
                         </div>
                       ))}
-                      {form.materials.length > 0 && (
-                        <div className="grid grid-cols-12 gap-2 text-[10px] text-[#7A6A64] px-1 mt-1">
-                          <div className="col-span-1" /><div className="col-span-3">Label</div>
-                          <div className="col-span-3">Value</div><div className="col-span-2">Price Add</div>
-                          <div className="col-span-2">Color</div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -671,8 +624,8 @@ export default function ProductForm({ initialData, productId }: ProductFormProps
               <dl className="space-y-2 text-sm">
                 {[
                   ['Product ID', <span className="font-mono text-xs">{productId.slice(0, 8)}…</span>],
-                  ['Sizes',      form.sizes.length],
-                  ['Materials',  form.materials.length],
+                  ['Size',       '8″ × 12″ (A4)'],
+                  ['Colours',    'Black, Brown'],
                   ['Images',     form.images.length],
                 ].map(([dt, dd]) => (
                   <div key={String(dt)} className="flex justify-between items-center">

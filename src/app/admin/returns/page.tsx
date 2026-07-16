@@ -35,22 +35,23 @@ export default async function AdminReturnsPage({ searchParams }: { searchParams:
   const tabs = ['pending', 'approved', 'rejected', 'refunded', 'all'];
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
+    <div className="p-4 md:p-6">
+      <div className="mb-5 md:mb-6">
         <h1 className="text-2xl font-bold text-[#2D1F1A]">Return Requests</h1>
         <p className="text-[#7A6A64] text-sm">{returns?.length || 0} requests</p>
       </div>
 
-      <div className="flex gap-2 mb-5">
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
         {tabs.map(t => (
           <a key={t} href={`/admin/returns?status=${t}`}
-            className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all ${statusFilter === t ? 'bg-[#C4634F] text-white' : 'bg-white border border-[#E8DDD6] text-[#7A6A64] hover:border-[#C4634F]'}`}>
+            className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all ${statusFilter === t ? 'bg-[#C4634F] text-white' : 'bg-white border border-[#E8DDD6] text-[#7A6A64] hover:border-[#C4634F]'}`}>
             {t}
           </a>
         ))}
       </div>
 
       <div className="bg-white rounded-2xl border border-[#E8DDD6] overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="bg-[#F5EDE5]">
@@ -87,6 +88,7 @@ export default async function AdminReturnsPage({ searchParams }: { searchParams:
             ))}
           </tbody>
         </table>
+        </div>
         {!returns?.length && (
           <div className="py-16 text-center text-[#7A6A64]">
             <RotateCcw size={32} className="mx-auto mb-3 opacity-30" />

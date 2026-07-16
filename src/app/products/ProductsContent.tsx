@@ -2,27 +2,34 @@
 
 import { useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Search, SlidersHorizontal, X, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  Search, SlidersHorizontal, X, ChevronDown, ChevronUp,
+  LayoutGrid, Gift, Heart, Gem, Users, MoonStar, Home, Briefcase,
+  Baby, GraduationCap,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { ProductCard } from '@/components/products/product-card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Product } from '@/types';
 
 /* ─── Category chips ─────────────────────────────────────────── */
-const PRIMARY_CATEGORIES = [
-  { value: '',            label: 'All' },
-  { value: 'birthday',   label: '🎂 Birthday' },
-  { value: 'anniversary',label: '💕 Anniversary' },
-  { value: 'wedding',    label: '💍 Wedding' },
-  { value: 'family',     label: '🏠 Family' },
-  { value: 'islamic',    label: '🌙 Islamic' },
+type Category = { value: string; label: string; Icon: LucideIcon };
+
+const PRIMARY_CATEGORIES: Category[] = [
+  { value: '',             label: 'All',         Icon: LayoutGrid },
+  { value: 'birthday',    label: 'Birthday',    Icon: Gift       },
+  { value: 'anniversary', label: 'Anniversary', Icon: Heart      },
+  { value: 'wedding',     label: 'Wedding',     Icon: Gem        },
+  { value: 'family',      label: 'Family',      Icon: Users      },
+  { value: 'islamic',     label: 'Islamic',     Icon: MoonStar   },
 ];
 
-const MORE_CATEGORIES = [
-  { value: 'housewarming', label: '🏡 Housewarming' },
-  { value: 'corporate',   label: '💼 Corporate' },
-  { value: 'newborn',     label: '👶 Newborn' },
-  { value: 'graduation',  label: '🎓 Graduation' },
+const MORE_CATEGORIES: Category[] = [
+  { value: 'housewarming', label: 'Housewarming', Icon: Home          },
+  { value: 'corporate',    label: 'Corporate',    Icon: Briefcase     },
+  { value: 'newborn',      label: 'Newborn',      Icon: Baby          },
+  { value: 'graduation',   label: 'Graduation',   Icon: GraduationCap },
 ];
 
 /* ─── Price ranges ───────────────────────────────────────────── */
@@ -35,8 +42,8 @@ const PRICE_RANGES = [
 
 /* ─── Availability options ───────────────────────────────────── */
 const AVAIL_OPTIONS = [
-  { value: 'featured', label: '⭐ Featured' },
-  { value: 'new',      label: '✨ New arrivals' },
+  { value: 'featured', label: 'Featured' },
+  { value: 'new',      label: 'New arrivals' },
 ];
 
 /* ═══════════════════════════════════════════════════════════════ */
@@ -94,17 +101,18 @@ function ProductsFilter({ products }: { products: Product[] }) {
 
   /* ── Chip helper ───────────────────────────────────────────── */
   const Chip = ({
-    value, label, active, onClick,
-  }: { value: string; label: string; active: boolean; onClick: () => void }) => (
+    value, label, Icon, active, onClick,
+  }: { value: string; label: string; Icon: LucideIcon; active: boolean; onClick: () => void }) => (
     <button
       onClick={onClick}
       className={cn(
-        'flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-all whitespace-nowrap',
+        'flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-all whitespace-nowrap',
         active
           ? 'bg-[#C4634F] text-white border-[#C4634F] shadow-sm'
           : 'bg-white text-[#7A6A64] border-[#E8DDD6] hover:border-[#C4634F] hover:text-[#C4634F]',
       )}
     >
+      <Icon size={15} strokeWidth={1.75} />
       {label}
     </button>
   );
@@ -166,6 +174,7 @@ function ProductsFilter({ products }: { products: Product[] }) {
               key={cat.value}
               value={cat.value}
               label={cat.label}
+              Icon={cat.Icon}
               active={category === cat.value}
               onClick={() => setCategory(cat.value === category && cat.value !== '' ? '' : cat.value)}
             />
@@ -193,6 +202,7 @@ function ProductsFilter({ products }: { products: Product[] }) {
                 key={cat.value}
                 value={cat.value}
                 label={cat.label}
+                Icon={cat.Icon}
                 active={category === cat.value}
                 onClick={() => setCategory(cat.value === category ? '' : cat.value)}
               />

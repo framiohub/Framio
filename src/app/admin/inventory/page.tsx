@@ -20,8 +20,8 @@ export default async function AdminInventoryPage() {
   const lowStock = inventory?.filter(i => i.stock_quantity <= i.low_stock_threshold) || [];
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
+    <div className="p-4 md:p-6">
+      <div className="mb-5 md:mb-6">
         <h1 className="text-2xl font-bold text-[#2D1F1A]">Inventory</h1>
         <p className="text-[#7A6A64] text-sm">{inventory?.length || 0} products tracked</p>
       </div>
@@ -37,6 +37,7 @@ export default async function AdminInventoryPage() {
       )}
 
       <div className="bg-white rounded-2xl border border-[#E8DDD6] overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="bg-[#F5EDE5]">
@@ -51,6 +52,7 @@ export default async function AdminInventoryPage() {
             ))}
           </tbody>
         </table>
+        </div>
         {!inventory?.length && (
           <div className="py-16 text-center text-[#7A6A64]">
             <Package size={32} className="mx-auto mb-3 opacity-30" />

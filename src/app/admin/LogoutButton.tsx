@@ -9,11 +9,12 @@ export default function LogoutButton() {
         await fetch('/api/admin/logout', { method: 'POST' });
         window.location.href = '/auth/login';
       }}
-      title="Sign Out"
-      className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg
-                 text-white/40 hover:text-red-400 hover:bg-red-500/15 transition-all"
+      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                 text-red-400 bg-red-500/10 hover:bg-red-500/20 hover:text-red-300
+                 text-[11px] font-medium transition-all flex-shrink-0"
     >
-      <LogOut size={13} />
+      <LogOut size={12} />
+      Sign out
     </button>
   );
 }

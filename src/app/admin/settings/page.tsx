@@ -36,7 +36,7 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-3xl">
+    <div className="p-4 md:p-6 space-y-5 md:space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-bold text-[#2D1F1A]">Settings</h1>
         <p className="text-[#7A6A64] text-sm">Manage your store configuration</p>
@@ -51,7 +51,7 @@ export default function AdminSettingsPage() {
           <h2 className="font-semibold text-[#2D1F1A]">Store Information</h2>
         </div>
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#2D1F1A] mb-1.5">Store Name</label>
               <input value={store.name} onChange={e => setStore(s => ({ ...s, name: e.target.value }))} className={inputCls} />
@@ -65,7 +65,7 @@ export default function AdminSettingsPage() {
             <label className="block text-sm font-medium text-[#2D1F1A] mb-1.5">Tagline</label>
             <input value={store.tagline} onChange={e => setStore(s => ({ ...s, tagline: e.target.value }))} className={inputCls} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#2D1F1A] mb-1.5">Phone</label>
               <input value={store.phone} onChange={e => setStore(s => ({ ...s, phone: e.target.value }))} placeholder="+91 98765 43210" className={inputCls} />
@@ -96,7 +96,7 @@ export default function AdminSettingsPage() {
           <h2 className="font-semibold text-[#2D1F1A]">Shipping Settings</h2>
         </div>
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#2D1F1A] mb-1.5">Free Shipping Above (₹)</label>
               <input type="number" value={shipping.free_shipping_above} onChange={e => setShipping(s => ({ ...s, free_shipping_above: e.target.value }))} className={inputCls} />
@@ -106,7 +106,7 @@ export default function AdminSettingsPage() {
               <input type="number" value={shipping.standard_rate} onChange={e => setShipping(s => ({ ...s, standard_rate: e.target.value }))} className={inputCls} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#2D1F1A] mb-1.5">Express Rate (₹)</label>
               <input type="number" value={shipping.express_rate} onChange={e => setShipping(s => ({ ...s, express_rate: e.target.value }))} className={inputCls} />

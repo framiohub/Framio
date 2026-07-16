@@ -54,7 +54,7 @@ export default function NewCouponPage() {
   const inputCls = "flex h-11 w-full rounded-xl border border-[#E8DDD6] bg-white px-4 py-2 text-sm text-[#2D1F1A] placeholder:text-[#7A6A64] focus:outline-none focus:ring-2 focus:ring-[#C4634F] focus:border-transparent";
 
   return (
-    <div className="p-6 max-w-2xl">
+    <div className="p-4 md:p-6 max-w-2xl">
       <Link href="/admin/coupons" className="flex items-center gap-2 text-sm text-[#7A6A64] hover:text-[#2D1F1A] mb-5">
         <ArrowLeft size={14} /> Back to Coupons
       </Link>
@@ -63,7 +63,7 @@ export default function NewCouponPage() {
 
       <div className="bg-white rounded-2xl border border-[#E8DDD6] p-6">
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#2D1F1A] mb-1.5">Coupon Code *</label>
               <input placeholder="SAVE20" value={form.code} onChange={set('code')}
@@ -80,7 +80,7 @@ export default function NewCouponPage() {
           </div>
 
           {form.type !== 'free_shipping' && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[#2D1F1A] mb-1.5">
                   {form.type === 'percentage' ? 'Discount %' : 'Flat Amount (₹)'} *
@@ -96,7 +96,7 @@ export default function NewCouponPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#2D1F1A] mb-1.5">Usage Limit</label>
               <input type="number" min="1" placeholder="Unlimited" value={form.max_uses} onChange={set('max_uses')} className={inputCls} />

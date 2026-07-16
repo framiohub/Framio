@@ -81,27 +81,27 @@ export default async function AdminAnalyticsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-5 md:space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-[#2D1F1A]">Analytics</h1>
         <p className="text-[#7A6A64] text-sm">Overview of your store performance</p>
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         {statCards.map(card => (
-          <div key={card.label} className="bg-white rounded-2xl border border-[#E8DDD6] p-5">
-            <div className={`w-10 h-10 ${card.bg} rounded-xl flex items-center justify-center mb-3`}>
-              <card.icon size={18} className={card.color} />
+          <div key={card.label} className="bg-white rounded-2xl border border-[#E8DDD6] p-4 md:p-5">
+            <div className={`w-9 h-9 md:w-10 md:h-10 ${card.bg} rounded-xl flex items-center justify-center mb-2 md:mb-3`}>
+              <card.icon size={16} className={card.color} />
             </div>
-            <p className="text-2xl font-bold text-[#2D1F1A]">{card.value}</p>
-            <p className="text-sm text-[#7A6A64] mt-0.5">{card.label}</p>
+            <p className="text-xl md:text-2xl font-bold text-[#2D1F1A]">{card.value}</p>
+            <p className="text-xs md:text-sm text-[#7A6A64] mt-0.5">{card.label}</p>
             {card.sub && <p className="text-xs text-emerald-600 font-medium mt-1">{card.sub}</p>}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {/* Order Status Breakdown */}
         <div className="bg-white rounded-2xl border border-[#E8DDD6] p-5">
           <h2 className="font-semibold text-[#2D1F1A] mb-4">Orders by Status</h2>
@@ -145,8 +145,9 @@ export default async function AdminAnalyticsPage() {
       </div>
 
       {/* Recent Orders */}
-      <div className="bg-white rounded-2xl border border-[#E8DDD6] p-5">
+      <div className="bg-white rounded-2xl border border-[#E8DDD6] p-4 md:p-5">
         <h2 className="font-semibold text-[#2D1F1A] mb-4">Recent Orders</h2>
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr>
@@ -177,6 +178,7 @@ export default async function AdminAnalyticsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

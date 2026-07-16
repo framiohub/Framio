@@ -63,8 +63,8 @@ export function AddToCartSection({ product }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Size selection */}
-      {product.sizes.length > 0 && (
+      {/* Size selection — shown only when multiple sizes exist */}
+      {product.sizes.length > 1 && (
         <div>
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold text-[#7A6A64] uppercase tracking-wider">Size</p>

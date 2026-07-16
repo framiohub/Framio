@@ -24,23 +24,24 @@ export default async function AdminCustomersPage({ searchParams }: { searchParam
   const { data: customers } = await query.limit(50);
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex items-start justify-between mb-5 gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-[#2D1F1A]">Customers</h1>
           <p className="text-[#7A6A64] text-sm">{customers?.length || 0} customers</p>
         </div>
-        <form method="GET" className="flex gap-2">
+        <form method="GET" className="flex gap-2 w-full sm:w-auto">
           <input name="q" defaultValue={q} placeholder="Search by name or email…"
-            className="w-64 h-10 px-4 rounded-xl border border-[#E8DDD6] text-sm focus:outline-none focus:ring-2 focus:ring-[#C4634F]" />
+            className="flex-1 sm:w-56 h-10 px-4 rounded-xl border border-[#E8DDD6] text-sm focus:outline-none focus:ring-2 focus:ring-[#C4634F]" />
           <button type="submit"
-            className="h-10 px-4 bg-[#C4634F] hover:bg-[#a8513f] text-white rounded-xl text-sm font-medium">
+            className="h-10 px-4 bg-[#C4634F] hover:bg-[#a8513f] text-white rounded-xl text-sm font-medium flex-shrink-0">
             Search
           </button>
         </form>
       </div>
 
       <div className="bg-white rounded-2xl border border-[#E8DDD6] overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="bg-[#F5EDE5]">
@@ -79,6 +80,7 @@ export default async function AdminCustomersPage({ searchParams }: { searchParam
             })}
           </tbody>
         </table>
+        </div>
         {!customers?.length && (
           <div className="py-16 text-center text-[#7A6A64]">
             <Users size={32} className="mx-auto mb-3 opacity-30" />

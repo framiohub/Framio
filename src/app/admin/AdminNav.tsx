@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   LayoutDashboard, Package, ShoppingBag,
-  Tag, Archive, Star, Users, TrendingUp, RotateCcw, Settings,
+  Tag, Archive, Star, Users, TrendingUp, RotateCcw, Settings, LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -29,15 +29,20 @@ const NAV = [
   ]},
 ];
 
-export default function AdminNav() {
+export default function AdminNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+
+  const handleLogout = async () => {
+    await fetch('/api/admin/logout', { method: 'POST' });
+    window.location.href = '/auth/login';
+  };
 
   return (
     <nav className="flex-1 overflow-y-auto px-2 py-2">
       {NAV.map(({ section, links }) => (
         <div key={section} className="mb-2">
 
-          {/* Section heading — aligns with icon start */}
+          {/* Section heading */}
           <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30 select-none">
             {section}
           </p>
@@ -53,6 +58,7 @@ export default function AdminNav() {
               <Link
                 key={href}
                 href={href}
+                onClick={onNavigate}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150',
                   isActive
@@ -60,23 +66,29 @@ export default function AdminNav() {
                     : 'text-white/55 hover:text-white hover:bg-white/8',
                 )}
               >
-                {/* Fixed-size icon so all icons align on the same column */}
                 <Icon
                   size={16}
                   strokeWidth={isActive ? 2.2 : 1.75}
                   className="flex-shrink-0"
                 />
-
-                {/* Label — same baseline across all items */}
                 <span className="flex-1 leading-none">{label}</span>
-
-                {/* Active indicator dot */}
                 {isActive && (
                   <span className="w-1.5 h-1.5 rounded-full bg-white/55 flex-shrink-0" />
                 )}
               </Link>
             );
           })}
+
+          {/* Logout button — renders after the Settings section */}
+          {section === 'Settings' && (
+            <button
+              onClick={() => { onNavigate?.(); handleLogout(); }}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150 text-red-400 hover:text-red-300 hover:bg-red-500/12"
+            >
+              <LogOut size={16} strokeWidth={1.75} className="flex-shrink-0" />
+              <span className="flex-1 leading-none text-left">Sign Out</span>
+            </button>
+          )}
         </div>
       ))}
     </nav>

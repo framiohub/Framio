@@ -20,21 +20,22 @@ export default async function AdminCouponsPage() {
     .order('created_at', { ascending: false });
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-[#2D1F1A]">Coupons</h1>
           <p className="text-[#7A6A64] text-sm">{coupons?.length || 0} discount codes</p>
         </div>
         <Link
           href="/admin/coupons/new"
-          className="flex items-center gap-2 bg-[#C4634F] hover:bg-[#a8513f] text-white px-4 py-2.5 rounded-xl font-medium text-sm transition-all"
+          className="flex items-center gap-2 bg-[#C4634F] hover:bg-[#a8513f] text-white px-4 py-2.5 rounded-xl font-medium text-sm transition-all flex-shrink-0"
         >
           <Plus size={16} /> Create Coupon
         </Link>
       </div>
 
       <div className="bg-white rounded-2xl border border-[#E8DDD6] overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="bg-[#F5EDE5]">
@@ -77,6 +78,7 @@ export default async function AdminCouponsPage() {
             ))}
           </tbody>
         </table>
+        </div>
         {!coupons?.length && (
           <div className="py-16 text-center text-[#7A6A64]">
             <Tag size={32} className="mx-auto mb-3 opacity-30" />

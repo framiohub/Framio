@@ -149,12 +149,12 @@ export default async function AdminDashboard() {
   ];
 
   return (
-    <div className="p-7 space-y-7 min-h-screen">
+    <div className="p-4 md:p-7 space-y-5 md:space-y-7 min-h-screen">
 
       {/* ── Header ────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-[1.6rem] font-bold text-[#2D1F1A] tracking-tight leading-none">
+          <h1 className="text-2xl md:text-[1.6rem] font-bold text-[#2D1F1A] tracking-tight leading-none">
             Dashboard
           </h1>
           <p className="text-[#7A6A64] text-sm mt-1.5">
@@ -167,17 +167,17 @@ export default async function AdminDashboard() {
         {d.pendingOrders > 0 && (
           <Link
             href="/admin/orders?status=pending"
-            className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200
-                       text-amber-700 rounded-xl text-sm font-semibold hover:bg-amber-100 transition-colors"
+            className="flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 bg-amber-50 border border-amber-200
+                       text-amber-700 rounded-xl text-sm font-semibold hover:bg-amber-100 transition-colors flex-shrink-0"
           >
             <Clock size={14} />
-            {d.pendingOrders} Pending Order{d.pendingOrders > 1 ? 's' : ''}
+            {d.pendingOrders} Pending{d.pendingOrders > 1 ? ' Orders' : ' Order'}
           </Link>
         )}
       </div>
 
       {/* ── Stat Cards ────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
         {statCards.map(card => (
           <div
             key={card.label}
@@ -196,7 +196,7 @@ export default async function AdminDashboard() {
 
             {/* Value */}
             <div>
-              <p className="text-3xl font-bold text-[#2D1F1A] leading-none tracking-tight">
+              <p className="text-2xl md:text-3xl font-bold text-[#2D1F1A] leading-none tracking-tight">
                 {card.value}
               </p>
               <p
@@ -215,10 +215,10 @@ export default async function AdminDashboard() {
       </div>
 
       {/* ── Main grid ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
 
-        {/* Recent Orders — 2/3 */}
-        <div className="col-span-2 bg-white rounded-2xl border border-[#E8DDD6] overflow-hidden">
+        {/* Recent Orders — full width on mobile, 2/3 on desktop */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-[#E8DDD6] overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8DDD6]">
             <div>
               <h2 className="font-bold text-[#2D1F1A]">Recent Orders</h2>
