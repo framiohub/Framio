@@ -150,24 +150,30 @@ export default async function HomePage() {
             <h2 className="text-2xl md:text-3xl font-bold mb-3">How Framio Works</h2>
             <p className="text-white/60">Ordering your custom frame takes less than 5 minutes</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {HOW_IT_WORKS.map((step, idx) => (
-              <div key={step.step} className="text-center">
-                <div className="relative inline-flex items-center justify-center w-16 h-16 mb-4 bg-[#C4634F] rounded-2xl text-white">
-                  {step.icon}
-                  <span className="absolute -top-2 -right-2 w-6 h-6 bg-[#C9A84C] rounded-full text-xs font-bold flex items-center justify-center text-white">
-                    {step.step}
-                  </span>
-                </div>
-                <h3 className="font-bold text-lg mb-2">{step.title}</h3>
-                <p className="text-white/60 text-sm">{step.desc}</p>
-                {idx < HOW_IT_WORKS.length - 1 && (
-                  <div className="hidden md:block absolute">
-                    <ArrowRight className="text-[#C4634F]" />
+          <div className="flex flex-col md:flex-row md:items-start">
+            {HOW_IT_WORKS.flatMap((step, idx) => {
+              const card = (
+                <div key={step.step} className="flex-1 text-center px-4 sm:px-8">
+                  <div className="relative inline-flex items-center justify-center w-16 h-16 mb-4 bg-[#C4634F] rounded-2xl text-white">
+                    {step.icon}
+                    <span className="absolute -top-2 -right-2 w-6 h-6 bg-[#C9A84C] rounded-full text-xs font-bold flex items-center justify-center text-white">
+                      {step.step}
+                    </span>
                   </div>
-                )}
-              </div>
-            ))}
+                  <h3 className="font-bold text-lg mb-2">{step.title}</h3>
+                  <p className="text-white/60 text-sm">{step.desc}</p>
+                </div>
+              );
+              if (idx < HOW_IT_WORKS.length - 1) {
+                return [
+                  card,
+                  <div key={`sep-${idx}`} className="hidden md:flex items-start justify-center pt-8 flex-shrink-0 w-10 opacity-50">
+                    <ArrowRight size={20} className="text-[#C4634F]" />
+                  </div>,
+                ];
+              }
+              return [card];
+            })}
           </div>
           <div className="mt-12 text-center">
             <Button size="lg" variant="gold" asChild>
