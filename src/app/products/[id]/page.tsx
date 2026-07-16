@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Truck, Shield, Star, ChevronRight, Layers, PackageCheck, Sparkles } from 'lucide-react';
+import { ArrowLeft, Truck, Shield, Star, ChevronRight, Layers, PackageCheck } from 'lucide-react';
 import { StarRating } from '@/components/ui/star-rating';
 import { Badge } from '@/components/ui/badge';
 import { formatPrice } from '@/lib/utils';
@@ -149,15 +149,6 @@ export default async function ProductDetailPage({
 
           {/* Size + Material + Add to Cart — all client-side */}
           <AddToCartSection product={product} />
-
-          {/* Customize Frame CTA */}
-          <Link
-            href={`/customize/${product.id}`}
-            className="mt-4 w-full flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-xl border-2 border-dashed border-[#C4634F]/40 text-[#C4634F] hover:border-[#C4634F] hover:bg-[#FFF4F2] transition-all"
-          >
-            <Sparkles size={15} />
-            Customize This Frame — Upload Photo & Add Text
-          </Link>
 
           {/* Trust signals */}
           <div className="grid grid-cols-2 gap-3 mt-6">

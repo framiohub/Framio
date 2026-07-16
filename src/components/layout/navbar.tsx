@@ -10,10 +10,11 @@ import { createClient } from '@/lib/supabase/client';
 const ADMIN_EMAIL = 'admin@framio.shop';
 
 const NAV_LINKS = [
-  { label: 'Home',    href: '/' },
-  { label: 'Shop',    href: '/products' },
-  { label: 'About',   href: '/about' },
-  { label: 'Contact', href: '/contact' },
+  { label: 'Home',          href: '/' },
+  { label: 'Shop',          href: '/products' },
+  { label: 'Custom Frames', href: '/customize' },
+  { label: 'About',         href: '/about' },
+  { label: 'Contact',       href: '/contact' },
 ];
 
 export function Navbar() {
