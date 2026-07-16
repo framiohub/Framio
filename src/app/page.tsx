@@ -171,7 +171,7 @@ export default async function HomePage() {
           </div>
           <div className="mt-12 text-center">
             <Button size="lg" variant="gold" asChild>
-              <Link href="/products">Start Customizing <ArrowRight size={18} /></Link>
+              <Link href="/customize">Start Customizing <ArrowRight size={18} /></Link>
             </Button>
           </div>
         </div>
