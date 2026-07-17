@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -102,11 +103,16 @@ function TrustStrip() {
   return (
     <div className="flex items-center gap-3">
       <div className="flex flex-shrink-0 -space-x-2">
-        {['P', 'R', 'A', 'S'].map(l => (
-          <div key={l}
-            className="flex h-7 w-7 items-center justify-center rounded-full
-                       border-2 border-white bg-[#C4634F] text-[10px] font-bold text-white">
-            {l}
+        {[1, 2, 3, 4].map(n => (
+          <div key={n}
+            className="relative h-7 w-7 rounded-full border-2 border-white overflow-hidden flex-shrink-0">
+            <Image
+              src={`/images/profiles/profile${n}.jpg`}
+              alt={`Happy customer ${n}`}
+              fill
+              sizes="28px"
+              className="object-cover"
+            />
           </div>
         ))}
       </div>
@@ -118,7 +124,7 @@ function TrustStrip() {
           <span className="ml-1 text-[11px] font-semibold text-[#2D1F1A]">4.9</span>
         </div>
         <p className="text-[11px] text-[#7A6A64]">
-          <strong className="text-[#2D1F1A]">4,200+</strong> happy customers
+          <strong className="text-[#2D1F1A]">100+</strong> happy customers
         </p>
       </div>
     </div>

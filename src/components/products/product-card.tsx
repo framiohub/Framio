@@ -12,9 +12,10 @@ import { cn } from '@/lib/utils';
 interface ProductCardProps {
   product: Product;
   className?: string;
+  priority?: boolean;
 }
 
-export function ProductCard({ product, className }: ProductCardProps) {
+export function ProductCard({ product, className, priority = false }: ProductCardProps) {
   const lowestPrice = product.sizes.length > 0
     ? Math.min(...product.sizes.map(s => s.price))
     : product.basePrice;
@@ -35,7 +36,8 @@ export function ProductCard({ product, className }: ProductCardProps) {
                   src={primaryImage}
                   alt={product.name}
                   fill
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  priority={priority}
                   className="object-contain transition-transform duration-500 group-hover:scale-105"
                 />
               </div>

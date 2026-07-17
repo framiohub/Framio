@@ -17,8 +17,10 @@ export function AddToCartSection({ product }: Props) {
   const addItem = useCartStore(s => s.addItem);
   const router  = useRouter();
 
-  const defaultSize     = product.sizes[0]     ?? null;
-  const defaultMaterial = product.materials[0] ?? null;
+  const defaultSize     = product.sizes[0] ?? null;
+  // Prefer Black as default; fall back to first material
+  const defaultMaterial =
+    product.materials.find(m => m.value === 'black') ?? product.materials[0] ?? null;
 
   const [selectedSize,     setSelectedSize]     = useState(defaultSize?.value     ?? '');
   const [selectedMaterial, setSelectedMaterial] = useState(defaultMaterial?.value ?? '');
@@ -63,6 +65,19 @@ export function AddToCartSection({ product }: Props) {
 
   return (
     <div className="space-y-5">
+      {/* Dynamic price — updates when size or colour changes */}
+      <div className="mb-1">
+        <p className="text-xs text-[#7A6A64] mb-1">
+          {materialObj ? `${sizeObj?.label ?? 'Base'} · ${materialObj.label}` : (sizeObj?.label ?? 'Price')}
+        </p>
+        <div className="flex items-baseline gap-2">
+          <span className="text-3xl font-bold text-[#C4634F]">{formatPrice(unitPrice)}</span>
+          {materialObj && materialObj.priceAdder > 0 && (
+            <span className="text-sm text-[#7A6A64]">incl. {materialObj.label} finish</span>
+          )}
+        </div>
+      </div>
+
       {/* Size selection — shown only when multiple sizes exist */}
       {product.sizes.length > 1 && (
         <div>
@@ -118,21 +133,6 @@ export function AddToCartSection({ product }: Props) {
           </div>
         </div>
       )}
-
-      {/* Price summary */}
-      <div className="bg-[#F5EDE5] rounded-2xl px-4 py-3 flex items-center justify-between">
-        <div>
-          <p className="text-xs text-[#7A6A64]">
-            {sizeObj?.label ?? 'Base'}
-            {materialObj && ` · ${materialObj.label}`}
-          </p>
-          <p className="text-2xl font-bold text-[#C4634F]">{formatPrice(unitPrice)}</p>
-        </div>
-        <div className="text-xs text-[#7A6A64] text-right">
-          <p>Free delivery</p>
-          <p>above ₹999</p>
-        </div>
-      </div>
 
       {/* Quantity + Add to Cart */}
       <div className="flex gap-3">

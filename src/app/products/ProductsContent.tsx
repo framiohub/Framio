@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, Suspense } from 'react';
+import { useState, useMemo, Suspense, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Search, SlidersHorizontal, X, ChevronDown, ChevronUp,
@@ -16,16 +16,13 @@ import { Product } from '@/types';
 /* ─── Category chips ─────────────────────────────────────────── */
 type Category = { value: string; label: string; Icon: LucideIcon };
 
-const PRIMARY_CATEGORIES: Category[] = [
-  { value: '',             label: 'All',         Icon: LayoutGrid },
-  { value: 'birthday',    label: 'Birthday',    Icon: Gift       },
-  { value: 'anniversary', label: 'Anniversary', Icon: Heart      },
-  { value: 'wedding',     label: 'Wedding',     Icon: Gem        },
-  { value: 'family',      label: 'Family',      Icon: Users      },
-  { value: 'islamic',     label: 'Islamic',     Icon: MoonStar   },
-];
-
-const MORE_CATEGORIES: Category[] = [
+const ALL_CATS: Category[] = [
+  { value: '',              label: 'All',          Icon: LayoutGrid    },
+  { value: 'birthday',     label: 'Birthday',     Icon: Gift          },
+  { value: 'anniversary',  label: 'Anniversary',  Icon: Heart         },
+  { value: 'wedding',      label: 'Wedding',      Icon: Gem           },
+  { value: 'family',       label: 'Family',       Icon: Users         },
+  { value: 'islamic',      label: 'Islamic',      Icon: MoonStar      },
   { value: 'housewarming', label: 'Housewarming', Icon: Home          },
   { value: 'corporate',    label: 'Corporate',    Icon: Briefcase     },
   { value: 'newborn',      label: 'Newborn',      Icon: Baby          },
@@ -52,12 +49,17 @@ function ProductsFilter({ products }: { products: Product[] }) {
   const searchParams    = useSearchParams();
   const initialOccasion = searchParams.get('occasion') || '';
 
-  const [search,      setSearch]      = useState('');
-  const [category,   setCategory]    = useState(initialOccasion);
-  const [priceRange,  setPriceRange]  = useState<{ min: number; max: number } | null>(null);
-  const [avail,       setAvail]       = useState<string | null>(null);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [showMore,    setShowMore]    = useState(false);
+  const containerRef  = useRef<HTMLDivElement>(null);
+  const ghostRef      = useRef<HTMLDivElement>(null);
+  const dropdownRef   = useRef<HTMLDivElement>(null);
+
+  const [search,       setSearch]       = useState('');
+  const [category,    setCategory]     = useState(initialOccasion);
+  const [priceRange,   setPriceRange]   = useState<{ min: number; max: number } | null>(null);
+  const [avail,        setAvail]        = useState<string | null>(null);
+  const [filtersOpen,  setFiltersOpen]  = useState(false);
+  const [cutoff,       setCutoff]       = useState(ALL_CATS.length);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   /* ── Filtering logic ───────────────────────────────────────── */
   const filtered = useMemo(() => {
@@ -91,12 +93,69 @@ function ProductsFilter({ products }: { products: Product[] }) {
   const advancedActive = priceRange || avail;
   const hasAnyFilter   = search || category || advancedActive;
 
+  /* ── Overflow chip detection ───────────────────────────────── */
+  const measure = useCallback(() => {
+    const container = containerRef.current;
+    const ghost     = ghostRef.current;
+    if (!container || !ghost) return;
+
+    const containerW = container.offsetWidth;
+    const children   = Array.from(ghost.children) as HTMLElement[];
+    if (children.length < 2) return;
+
+    const moreW      = children[children.length - 1].offsetWidth;
+    const chipWidths = children.slice(0, -1).map(el => el.offsetWidth);
+    const GAP        = 8;
+
+    let usedW     = 0;
+    let newCutoff = chipWidths.length;
+
+    for (let i = 0; i < chipWidths.length; i++) {
+      const gapBefore   = i === 0 ? 0 : GAP;
+      const allFromHere = chipWidths.slice(i).reduce((s, w) => s + w, 0)
+                        + (chipWidths.length - i - 1) * GAP;
+
+      if (usedW + gapBefore + allFromHere <= containerW) {
+        newCutoff = chipWidths.length;
+        break;
+      }
+
+      if (usedW + gapBefore + chipWidths[i] + GAP + moreW <= containerW) {
+        usedW += gapBefore + chipWidths[i];
+        newCutoff = i + 1;
+      } else {
+        newCutoff = i;
+        break;
+      }
+    }
+
+    setCutoff(newCutoff);
+  }, []);
+
+  useEffect(() => {
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (containerRef.current) ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [measure]);
+
+  useEffect(() => {
+    if (!showDropdown) return;
+    function onDown(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [showDropdown]);
+
   const clearAll = () => {
     setSearch('');
     setCategory('');
     setPriceRange(null);
     setAvail(null);
-    setShowMore(false);
+    setShowDropdown(false);
   };
 
   /* ── Chip helper ───────────────────────────────────────────── */
@@ -166,10 +225,34 @@ function ProductsFilter({ products }: { products: Product[] }) {
         )}
       </div>
 
-      {/* ── Row 2: Category chips ───────────────────────────────── */}
+      {/* ── Row 2: Category chips (single row, overflow → More dropdown) ── */}
       <div className="mb-5">
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {PRIMARY_CATEGORIES.map(cat => (
+        {/* Ghost layer: invisible, zero-height — used only to measure natural chip widths */}
+        <div className="relative h-0 overflow-hidden" aria-hidden>
+          <div
+            ref={ghostRef}
+            className="absolute flex gap-2 invisible pointer-events-none"
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            {ALL_CATS.map(cat => (
+              <span
+                key={cat.value}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-[#E8DDD6] whitespace-nowrap"
+              >
+                <cat.Icon size={15} strokeWidth={1.75} />
+                {cat.label}
+              </span>
+            ))}
+            {/* More button ghost for width reservation */}
+            <span className="inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium border border-[#E8DDD6] whitespace-nowrap">
+              More <ChevronDown size={13} />
+            </span>
+          </div>
+        </div>
+
+        {/* Visible chips row */}
+        <div ref={containerRef} className="flex items-center gap-2">
+          {ALL_CATS.slice(0, cutoff).map(cat => (
             <Chip
               key={cat.value}
               value={cat.value}
@@ -180,35 +263,46 @@ function ProductsFilter({ products }: { products: Product[] }) {
             />
           ))}
 
-          {/* More ▼ toggle */}
-          <button
-            onClick={() => setShowMore(!showMore)}
-            className={cn(
-              'flex-shrink-0 flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium border transition-all whitespace-nowrap',
-              showMore
-                ? 'bg-[#F5EDE5] text-[#C4634F] border-[#C4634F]'
-                : 'bg-white text-[#7A6A64] border-[#E8DDD6] hover:border-[#C4634F] hover:text-[#C4634F]',
-            )}
-          >
-            More {showMore ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-          </button>
-        </div>
+          {/* More dropdown — only rendered when chips overflow */}
+          {cutoff < ALL_CATS.length && (
+            <div ref={dropdownRef} className="relative flex-shrink-0">
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className={cn(
+                  'flex-shrink-0 flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium border transition-all whitespace-nowrap',
+                  showDropdown || ALL_CATS.slice(cutoff).some(c => c.value === category)
+                    ? 'bg-[#F5EDE5] text-[#C4634F] border-[#C4634F]'
+                    : 'bg-white text-[#7A6A64] border-[#E8DDD6] hover:border-[#C4634F] hover:text-[#C4634F]',
+                )}
+              >
+                More {showDropdown ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              </button>
 
-        {/* Expanded extra categories */}
-        {showMore && (
-          <div className="flex flex-wrap gap-2 mt-2 pl-0.5">
-            {MORE_CATEGORIES.map(cat => (
-              <Chip
-                key={cat.value}
-                value={cat.value}
-                label={cat.label}
-                Icon={cat.Icon}
-                active={category === cat.value}
-                onClick={() => setCategory(cat.value === category ? '' : cat.value)}
-              />
-            ))}
-          </div>
-        )}
+              {showDropdown && (
+                <div className="absolute top-full left-0 mt-1.5 bg-white rounded-xl border border-[#E8DDD6] shadow-lg py-1.5 min-w-[160px] z-20">
+                  {ALL_CATS.slice(cutoff).map(cat => (
+                    <button
+                      key={cat.value}
+                      onClick={() => {
+                        setCategory(cat.value === category ? '' : cat.value);
+                        setShowDropdown(false);
+                      }}
+                      className={cn(
+                        'w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left transition-colors',
+                        category === cat.value
+                          ? 'text-[#C4634F] bg-[#F5EDE5] font-medium'
+                          : 'text-[#2D1F1A] hover:bg-[#F5EDE5] hover:text-[#C4634F]',
+                      )}
+                    >
+                      <cat.Icon size={15} strokeWidth={1.75} />
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Advanced filters panel ──────────────────────────────── */}
@@ -273,7 +367,7 @@ function ProductsFilter({ products }: { products: Product[] }) {
         {filtered.length} frame{filtered.length !== 1 ? 's' : ''} found
         {category && (
           <span className="ml-1 text-[#C4634F] font-medium">
-            · {[...PRIMARY_CATEGORIES, ...MORE_CATEGORIES].find(c => c.value === category)?.label}
+            · {ALL_CATS.find(c => c.value === category)?.label}
           </span>
         )}
       </p>
@@ -296,9 +390,9 @@ function ProductsFilter({ products }: { products: Product[] }) {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-          {filtered.map(product => (
-            <ProductCard key={product.id} product={product} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
+          {filtered.map((product, idx) => (
+            <ProductCard key={product.id} product={product} priority={idx === 0} />
           ))}
         </div>
       )}

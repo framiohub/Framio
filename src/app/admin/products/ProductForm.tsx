@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowLeft, Save, Globe, Eye, Plus,
+  ArrowLeft, Save, Globe, Eye, Plus, Trash2,
   Image as ImageIcon, Loader2, X, Check, AlertCircle, Upload, Link as LinkIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -141,9 +141,18 @@ export default function ProductForm({ initialData, productId }: ProductFormProps
     }
   };
 
-  /* ── Materials (Black / Brown price adder) ── */
+  /* ── Materials ── */
   const updateMaterial = (i: number, field: keyof MaterialVariant, val: any) =>
     set('materials', form.materials.map((m, idx) => idx === i ? { ...m, [field]: val } : m));
+
+  const removeMaterial = (i: number) =>
+    set('materials', form.materials.filter((_, idx) => idx !== i));
+
+  const addMaterial = () =>
+    set('materials', [
+      ...form.materials,
+      { label: '', value: `colour-${Date.now()}`, priceAdder: 0, color: '#888888' },
+    ]);
 
   /* ── Images ── */
   const addImageUrl = () => {
@@ -310,8 +319,13 @@ export default function ProductForm({ initialData, productId }: ProductFormProps
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-[#7A6A64] uppercase tracking-wider mb-1.5 block">Photo Slots</label>
-                      <input type="number" min={1} max={10} className={inputCls()} value={form.photoSlots}
-                        onChange={e => set('photoSlots', parseInt(e.target.value) || 1)} />
+                      <input
+                        type="number" min={1} max={10}
+                        className={inputCls()}
+                        value={form.photoSlots || ''}
+                        onFocus={e => e.target.select()}
+                        onChange={e => set('photoSlots', parseInt(e.target.value) || 1)}
+                      />
                     </div>
                   </div>
 
@@ -340,14 +354,24 @@ export default function ProductForm({ initialData, productId }: ProductFormProps
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-semibold text-[#7A6A64] uppercase tracking-wider mb-1.5 block">Base Price (₹) *</label>
-                      <input type="number" min={0} step={1} className={inputCls('basePrice')} value={form.basePrice}
-                        onChange={e => set('basePrice', parseFloat(e.target.value) || 0)} />
+                      <input
+                        type="number" min={0} step={1}
+                        className={inputCls('basePrice')}
+                        value={form.basePrice || ''}
+                        onFocus={e => e.target.select()}
+                        onChange={e => set('basePrice', parseFloat(e.target.value) || 0)}
+                      />
                       {errors.basePrice && <p className="text-xs text-red-500 mt-1">{errors.basePrice}</p>}
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-[#7A6A64] uppercase tracking-wider mb-1.5 block">Total Stock Qty</label>
-                      <input type="number" min={0} step={1} className={inputCls()} value={form.stockQuantity}
-                        onChange={e => set('stockQuantity', parseInt(e.target.value) || 0)} />
+                      <input
+                        type="number" min={0} step={1}
+                        className={inputCls()}
+                        value={form.stockQuantity || ''}
+                        onFocus={e => e.target.select()}
+                        onChange={e => set('stockQuantity', parseInt(e.target.value) || 0)}
+                      />
                     </div>
                   </div>
 
@@ -386,32 +410,83 @@ export default function ProductForm({ initialData, productId }: ProductFormProps
                     </div>
                   </div>
 
-                  {/* Frame Colour — Black & Brown only */}
+                  {/* Frame Colour */}
                   <div>
-                    <h3 className="font-semibold text-[#2D1F1A] text-sm mb-1">Frame Colour</h3>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-semibold text-[#2D1F1A] text-sm">Frame Colour</h3>
+                      <button
+                        onClick={addMaterial}
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-[#F5EDE5] text-[#C4634F] rounded-lg hover:bg-[#E8DDD6] transition-colors"
+                      >
+                        <Plus size={12} /> Add Colour
+                      </button>
+                    </div>
                     <p className="text-xs text-[#7A6A64] mb-3">Set an extra charge per colour (0 = same as base price)</p>
                     <div className="space-y-2">
-                      {form.materials.map((mat, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 bg-white border border-[#E8DDD6] rounded-xl">
-                          <div
-                            className="w-8 h-8 rounded-full border-2 border-white shadow flex-shrink-0"
-                            style={{ backgroundColor: mat.color, boxShadow: '0 0 0 1px #E8DDD6' }}
-                          />
-                          <span className="text-sm font-semibold text-[#2D1F1A] flex-1">{mat.label}</span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-[#7A6A64] font-medium">+₹</span>
+                      {form.materials.map((mat, i) => {
+                        const isDefault = mat.value === 'black';
+                        return (
+                          <div key={i} className="flex items-center gap-2 p-3 bg-white border border-[#E8DDD6] rounded-xl">
+                            {/* Colour picker */}
+                            <label className="relative flex-shrink-0 cursor-pointer">
+                              <div
+                                className="w-8 h-8 rounded-full border-2 border-white shadow"
+                                style={{ backgroundColor: mat.color, boxShadow: '0 0 0 1px #E8DDD6' }}
+                              />
+                              <input
+                                type="color"
+                                value={mat.color}
+                                onChange={e => updateMaterial(i, 'color', e.target.value)}
+                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                              />
+                            </label>
+
+                            {/* Name */}
                             <input
-                              type="number"
-                              min={0}
-                              step={1}
-                              className={cn(inputCls(), 'w-24 text-right')}
-                              placeholder="0"
-                              value={mat.priceAdder}
-                              onChange={e => updateMaterial(i, 'priceAdder', parseFloat(e.target.value) || 0)}
+                              className={cn(inputCls(), 'flex-1 min-w-0 text-sm')}
+                              placeholder="Colour name"
+                              value={mat.label}
+                              onChange={e => {
+                                const label = e.target.value;
+                                const value = label.toLowerCase().replace(/\s+/g, '-') || `colour-${i}`;
+                                updateMaterial(i, 'label', label);
+                                if (!isDefault) updateMaterial(i, 'value', value);
+                              }}
                             />
+
+                            {/* Price adder */}
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <span className="text-xs text-[#7A6A64]">+₹</span>
+                              <input
+                                type="number"
+                                min={0}
+                                step={1}
+                                className={cn(inputCls(), 'w-20 text-right text-sm')}
+                                placeholder="0"
+                                value={mat.priceAdder || ''}
+                                onFocus={e => e.target.select()}
+                                onChange={e => updateMaterial(i, 'priceAdder', parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+
+                            {/* Default badge or delete button */}
+                            {isDefault ? (
+                              <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#C4634F]/10 text-[#C4634F] border border-[#C4634F]/20">
+                                Default
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => removeMaterial(i)}
+                                disabled={form.materials.length === 1}
+                                title="Remove colour"
+                                className="flex-shrink-0 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -625,7 +700,7 @@ export default function ProductForm({ initialData, productId }: ProductFormProps
                 {[
                   ['Product ID', <span className="font-mono text-xs">{productId.slice(0, 8)}…</span>],
                   ['Size',       '8″ × 12″ (A4)'],
-                  ['Colours',    'Black, Brown'],
+                  ['Colours',    form.materials.map(m => m.label).filter(Boolean).join(', ') || '—'],
                   ['Images',     form.images.length],
                 ].map(([dt, dd]) => (
                   <div key={String(dt)} className="flex justify-between items-center">

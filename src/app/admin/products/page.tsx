@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -54,16 +54,36 @@ const statusStyle: Record<string, string> = {
 function ActionMenu({ product, onDelete, onDuplicate, onToggleStatus }:
   { product: Product; onDelete: () => void; onDuplicate: () => void; onToggleStatus: (s: string) => void }) {
   const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      const MENU_HEIGHT = 240;
+      const showAbove = window.innerHeight - rect.bottom < MENU_HEIGHT + 8;
+      setMenuPos({
+        top:   showAbove ? rect.top - MENU_HEIGHT - 4 : rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setOpen(v => !v);
+  };
+
   return (
-    <div className="relative">
-      <button onClick={() => setOpen(!open)} className="p-1.5 hover:bg-[#F5EDE5] rounded-lg transition-colors">
+    <div>
+      <button ref={btnRef} onClick={handleOpen} className="p-1.5 hover:bg-[#F5EDE5] rounded-lg transition-colors">
         <MoreVertical size={14} className="text-[#7A6A64]" />
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-8 z-20 w-44 bg-white rounded-xl shadow-lg border border-[#E8DDD6] py-1 overflow-hidden">
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div
+            className="fixed z-40 w-44 bg-white rounded-xl shadow-lg border border-[#E8DDD6] py-1"
+            style={{ top: menuPos.top, right: menuPos.right }}
+          >
             <Link href={`/admin/products/${product.id}/edit`}
+              onClick={() => setOpen(false)}
               className="flex items-center gap-2 px-3 py-2 text-sm text-[#2D1F1A] hover:bg-[#F5EDE5] transition-colors">
               <Edit size={13} /> Edit
             </Link>

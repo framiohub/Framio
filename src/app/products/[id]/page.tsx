@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { ArrowLeft, Truck, Shield, Star, ChevronRight, Layers, PackageCheck } from 'lucide-react';
 import { StarRating } from '@/components/ui/star-rating';
 import { Badge } from '@/components/ui/badge';
-import { formatPrice } from '@/lib/utils';
 import { Product } from '@/types';
 import { ProductImageGallery } from './ProductImageGallery';
 import { AddToCartSection } from './AddToCartSection';
@@ -84,9 +83,6 @@ export default async function ProductDetailPage({
   const product = await fetchProduct(id);
   if (!product) notFound();
 
-  const lowestPrice  = product.sizes.length > 0 ? Math.min(...product.sizes.map(s => s.price)) : product.basePrice;
-  const highestPrice = product.sizes.length > 0 ? Math.max(...product.sizes.map(s => s.price)) : product.basePrice;
-
   const fallbackVisual = (
     <div className="relative z-10 flex flex-col items-center gap-4">
       <div className="w-48 h-60 rounded-xl shadow-2xl bg-[#C4A882] border-8 border-[#B8966E] flex items-center justify-center">
@@ -135,17 +131,6 @@ export default async function ProductDetailPage({
           )}
 
           <p className="text-[#7A6A64] leading-relaxed mb-5">{product.description}</p>
-
-          {/* Price */}
-          <div className="mb-6">
-            <p className="text-xs text-[#7A6A64] mb-1">{product.sizes.length > 1 ? 'Starting from' : 'Price'}</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-[#C4634F]">{formatPrice(lowestPrice)}</span>
-              {highestPrice > lowestPrice && (
-                <span className="text-[#7A6A64] text-sm">– {formatPrice(highestPrice)}</span>
-              )}
-            </div>
-          </div>
 
           {/* Frame size — server-rendered so it always shows on every viewport */}
           {product.sizes.length === 1 && (
