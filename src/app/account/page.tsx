@@ -2,21 +2,21 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Package, Heart, MapPin, User, Settings,
   HelpCircle, LogOut, ChevronRight, Loader2, Save, Plus,
   MessageCircle, Mail, Phone, Shield, Bell, Lock,
-  ArrowRight, Star, Trash2, Edit3,
+  ArrowRight, Star, Trash2, Edit3, Camera,
 } from 'lucide-react';
 
 const AdminIcon = LayoutDashboard;
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { formatPrice, getOrderStatusLabel } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -24,9 +24,9 @@ const ADMIN_EMAIL = 'admin@framio.shop';
 
 type Section = 'dashboard' | 'orders' | 'wishlist' | 'addresses' | 'profile' | 'settings' | 'help';
 
-interface Profile  { name: string; phone: string; email: string; }
-interface Order     { id: string; status: string; total: number; created_at: string; item_count?: number; }
-interface Address   { id: string; label: string; line1: string; line2?: string; city: string; state: string; pincode: string; phone: string; isDefault: boolean; }
+interface Profile  { name: string; phone: string; email: string; avatarUrl: string | null; }
+interface Order    { id: string; status: string; total: number; created_at: string; }
+interface Address  { id: string; label: string; line1: string; line2?: string; city: string; state: string; pincode: string; phone: string; isDefault: boolean; }
 
 const NAV = [
   { id: 'dashboard' as Section, label: 'Dashboard',       icon: LayoutDashboard },
@@ -49,14 +49,17 @@ export default function AccountPage() {
   const router   = useRouter();
   const supabase = createClient();
 
-  const [section, setSection] = useState<Section>('dashboard');
-  const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState(false);
+  const [section,   setSection]   = useState<Section>('dashboard');
+  const [loading,   setLoading]   = useState(true);
+  const [saving,    setSaving]    = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  const [authUser, setAuthUser] = useState<{ id: string; email?: string } | null>(null);
-  const [profile,  setProfile]  = useState<Profile>({ name: '', phone: '', email: '' });
-  const [orders,   setOrders]   = useState<Order[]>([]);
-  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [authUser,   setAuthUser]   = useState<{ id: string; email?: string } | null>(null);
+  const [profile,    setProfile]    = useState<Profile>({ name: '', phone: '', email: '', avatarUrl: null });
+  const [orders,     setOrders]     = useState<Order[]>([]);
+  const [addresses,  setAddresses]  = useState<Address[]>([]);
+
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   /* address form state */
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -77,8 +80,20 @@ export default function AccountPage() {
         supabase.from('addresses').select('*').eq('user_id', u.id).order('is_default', { ascending: false }),
       ]);
 
-      if (p) setProfile({ name: p.name || '', phone: p.phone || '', email: p.email || u.email || '' });
-      else   setProfile(prev => ({ ...prev, email: u.email || '' }));
+      if (p) {
+        setProfile({
+          name:      p.name || p.full_name || '',
+          phone:     p.phone || '',
+          email:     p.email || u.email || '',
+          avatarUrl: p.avatar_url || u.user_metadata?.avatar_url || null,
+        });
+      } else {
+        setProfile(prev => ({
+          ...prev,
+          email:     u.email || '',
+          avatarUrl: u.user_metadata?.avatar_url || null,
+        }));
+      }
       setOrders(o || []);
       setAddresses((addr || []).map((a: Record<string, unknown>) => ({
         id:        a.id as string,
@@ -97,11 +112,53 @@ export default function AccountPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* ── Photo upload ───────────────────────────────────────────── */
+  const handlePhotoUpload = async (file: File) => {
+    if (!authUser) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('Photo must be under 5 MB'); return; }
+    setUploading(true);
+
+    const ext  = file.name.split('.').pop() ?? 'jpg';
+    const path = `${authUser.id}/avatar.${ext}`;
+
+    const { error: upErr } = await supabase.storage
+      .from('customer-uploads')
+      .upload(path, file, { upsert: true, contentType: file.type });
+
+    if (upErr) {
+      toast.error('Upload failed: ' + upErr.message);
+      setUploading(false);
+      return;
+    }
+
+    // Generate a 10-year signed URL (bucket is private)
+    const { data: signed } = await supabase.storage
+      .from('customer-uploads')
+      .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+
+    const url = signed?.signedUrl ?? null;
+    if (url) {
+      await supabase.from('profiles').upsert({
+        id: authUser.id, avatar_url: url,
+        updated_at: new Date().toISOString(),
+      });
+      setProfile(p => ({ ...p, avatarUrl: url }));
+      toast.success('Profile photo updated!');
+    }
+    setUploading(false);
+  };
+
+  /* ── Save profile ───────────────────────────────────────────── */
   const saveProfile = async () => {
     if (!authUser) return;
     setSaving(true);
-    const { error } = await supabase.from('profiles')
-      .upsert({ id: authUser.id, name: profile.name, phone: profile.phone, email: profile.email, updated_at: new Date().toISOString() });
+    const { error } = await supabase.from('profiles').upsert({
+      id:         authUser.id,
+      name:       profile.name,
+      full_name:  profile.name,   // keep both columns in sync
+      email:      profile.email,
+      updated_at: new Date().toISOString(),
+    });
     setSaving(false);
     if (error) toast.error('Failed to save profile');
     else toast.success('Profile updated!');
@@ -117,6 +174,7 @@ export default function AccountPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  /* ── Address helpers ────────────────────────────────────────── */
   const saveAddress = async () => {
     if (!authUser) return;
     if (!addrForm.line1 || !addrForm.city || !addrForm.pincode || !addrForm.phone) {
@@ -154,13 +212,30 @@ export default function AccountPage() {
   }
 
   const initials = profile.name
-    ? profile.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+    ? profile.name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)
     : (authUser?.email?.[0] || 'U').toUpperCase();
 
-  /* ── Section renderers ───────────────────────────────────────── */
-  const delivered  = orders.filter(o => o.status === 'delivered').length;
-  const processing = orders.filter(o => ['processing', 'shipped'].includes(o.status)).length;
+  /* ── Shared avatar renderer ─────────────────────────────────── */
+  function AvatarCircle({ size, className = '', shape = 'rounded-xl' }: { size: number; className?: string; shape?: string }) {
+    if (profile.avatarUrl) {
+      return (
+        <div style={{ width: size, height: size }} className={`relative ${shape} overflow-hidden flex-shrink-0 bg-[#C4634F]/10 ${className}`}>
+          <Image src={profile.avatarUrl} alt="avatar" fill sizes={`${size}px`} className="object-cover" />
+        </div>
+      );
+    }
+    return (
+      <div style={{ width: size, height: size, fontSize: Math.round(size * 0.34) }}
+        className={`${shape} bg-[#C4634F] flex items-center justify-center text-white font-bold flex-shrink-0 ${className}`}>
+        {initials}
+      </div>
+    );
+  }
 
+  /* ── Derived ────────────────────────────────────────────────── */
+  const delivered  = orders.filter(o => o.status === 'delivered').length;
+
+  /* ── Section renderers ───────────────────────────────────────── */
   const sections: Record<Section, React.ReactNode> = {
 
     /* Dashboard */
@@ -171,7 +246,6 @@ export default function AccountPage() {
           <p className="text-sm text-[#7A6A64] mt-0.5">Here's a snapshot of your account.</p>
         </div>
 
-        {/* Admin shortcut */}
         {authUser?.email === ADMIN_EMAIL && (
           <Link href="/admin" className="flex items-center gap-3 p-4 bg-[#2D1F1A] rounded-2xl hover:bg-[#3d2b24] transition-all group">
             <div className="w-10 h-10 bg-[#C4634F] rounded-xl flex items-center justify-center flex-shrink-0">
@@ -185,12 +259,11 @@ export default function AccountPage() {
           </Link>
         )}
 
-        {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {[
-            { label: 'Total Orders',    value: orders.length,    icon: <Package size={18} />,  color: 'text-[#C4634F]', bg: 'bg-[#C4634F]/10', action: () => navigate('orders') },
-            { label: 'Delivered',       value: delivered,         icon: <Star size={18} />,     color: 'text-emerald-600', bg: 'bg-emerald-50',  action: () => navigate('orders') },
-            { label: 'Saved Addresses', value: addresses.length,  icon: <MapPin size={18} />,   color: 'text-[#C9A84C]',  bg: 'bg-[#C9A84C]/10', action: () => navigate('addresses') },
+            { label: 'Total Orders',    value: orders.length,    icon: <Package size={18} />,  color: 'text-[#C4634F]',   bg: 'bg-[#C4634F]/10',  action: () => navigate('orders') },
+            { label: 'Delivered',       value: delivered,         icon: <Star size={18} />,     color: 'text-emerald-600', bg: 'bg-emerald-50',    action: () => navigate('orders') },
+            { label: 'Saved Addresses', value: addresses.length,  icon: <MapPin size={18} />,   color: 'text-[#C9A84C]',   bg: 'bg-[#C9A84C]/10', action: () => navigate('addresses') },
           ].map(s => (
             <button key={s.label} onClick={s.action}
               className="bg-white rounded-2xl border border-[#E8DDD6] p-5 text-left hover:border-[#C4634F]/40 hover:shadow-sm transition-all">
@@ -201,7 +274,6 @@ export default function AccountPage() {
           ))}
         </div>
 
-        {/* Recent orders */}
         <div className="bg-white rounded-2xl border border-[#E8DDD6] overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8DDD6]">
             <h3 className="font-bold text-[#2D1F1A] text-sm">Recent Orders</h3>
@@ -239,7 +311,6 @@ export default function AccountPage() {
           )}
         </div>
 
-        {/* Quick actions */}
         <div className="grid grid-cols-2 gap-3">
           {[
             { label: 'Browse Frames', href: '/products', icon: <ArrowRight size={14} /> },
@@ -321,7 +392,11 @@ export default function AccountPage() {
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-[#2D1F1A]">Saved Addresses</h2>
           {!showAddressForm && (
-            <Button size="sm" onClick={() => { setEditingAddress(null); setAddrForm({ label: 'Home', line1: '', line2: '', city: '', state: 'Maharashtra', pincode: '', phone: '' }); setShowAddressForm(true); }}>
+            <Button size="sm" onClick={() => {
+              setEditingAddress(null);
+              setAddrForm({ label: 'Home', line1: '', line2: '', city: '', state: 'Maharashtra', pincode: '', phone: '' });
+              setShowAddressForm(true);
+            }}>
               <Plus size={14} /> Add New
             </Button>
           )}
@@ -331,7 +406,6 @@ export default function AccountPage() {
           <div className="bg-white rounded-2xl border border-[#E8DDD6] p-6">
             <h3 className="font-bold text-[#2D1F1A] mb-5">{editingAddress ? 'Edit Address' : 'New Address'}</h3>
             <div className="space-y-4">
-              {/* Label */}
               <div className="flex gap-2">
                 {['Home', 'Work', 'Other'].map(l => (
                   <button key={l} onClick={() => setAddrForm(f => ({ ...f, label: l }))}
@@ -377,8 +451,11 @@ export default function AccountPage() {
                     {a.isDefault && <span className="text-xs font-medium text-emerald-600">Default</span>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => { setEditingAddress(a); setAddrForm({ label: a.label, line1: a.line1, line2: a.line2, city: a.city, state: a.state, pincode: a.pincode, phone: a.phone }); setShowAddressForm(true); }}
-                      className="p-1.5 text-[#7A6A64] hover:text-[#C4634F] hover:bg-[#F5EDE5] rounded-lg transition-all">
+                    <button onClick={() => {
+                      setEditingAddress(a);
+                      setAddrForm({ label: a.label, line1: a.line1, line2: a.line2, city: a.city, state: a.state, pincode: a.pincode, phone: a.phone });
+                      setShowAddressForm(true);
+                    }} className="p-1.5 text-[#7A6A64] hover:text-[#C4634F] hover:bg-[#F5EDE5] rounded-lg transition-all">
                       <Edit3 size={13} />
                     </button>
                     <button onClick={() => deleteAddress(a.id)}
@@ -399,27 +476,110 @@ export default function AccountPage() {
 
     /* Profile */
     profile: (
-      <div>
-        <h2 className="text-xl font-bold text-[#2D1F1A] mb-6">Profile</h2>
+      <div className="space-y-5">
+        <h2 className="text-xl font-bold text-[#2D1F1A]">Profile</h2>
+
+        {/* Photo card */}
         <div className="bg-white rounded-2xl border border-[#E8DDD6] p-6">
-          <div className="flex items-center gap-4 mb-6 pb-6 border-b border-[#E8DDD6]">
-            <div className="w-16 h-16 rounded-2xl bg-[#C4634F] flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-              {initials}
+          <p className="text-sm font-semibold text-[#2D1F1A] mb-4">Profile Photo</p>
+          <div className="flex items-center gap-5">
+            {/* Avatar with camera overlay */}
+            <div className="relative flex-shrink-0">
+              <AvatarCircle size={80} shape="rounded-full" />
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploading}
+                className="absolute inset-0 rounded-full bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
+                aria-label="Change photo"
+              >
+                {uploading
+                  ? <Loader2 size={20} className="text-white animate-spin" />
+                  : <Camera size={20} className="text-white" />}
+              </button>
+              {/* Mobile: separate button since hover doesn't work on touch */}
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploading}
+                className="sm:hidden absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#C4634F] flex items-center justify-center shadow-lg"
+              >
+                {uploading ? <Loader2 size={12} className="text-white animate-spin" /> : <Camera size={12} className="text-white" />}
+              </button>
             </div>
+
             <div>
-              <p className="font-bold text-[#2D1F1A]">{profile.name || 'Set your name'}</p>
-              <p className="text-sm text-[#7A6A64]">{authUser?.email}</p>
+              <p className="text-sm font-medium text-[#2D1F1A]">
+                {profile.avatarUrl ? 'Change your photo' : 'Upload a profile photo'}
+              </p>
+              <p className="text-xs text-[#7A6A64] mt-0.5">JPG, PNG or WebP · max 5 MB</p>
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploading}
+                className="mt-2 text-xs font-semibold text-[#C4634F] hover:underline disabled:opacity-50 flex items-center gap-1"
+              >
+                <Camera size={11} />
+                {uploading ? 'Uploading…' : profile.avatarUrl ? 'Change photo' : 'Upload photo'}
+              </button>
+            </div>
+
+            {/* Hidden file input */}
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file) handlePhotoUpload(file);
+                e.target.value = '';
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Personal details card */}
+        <div className="bg-white rounded-2xl border border-[#E8DDD6] p-6">
+          <p className="text-sm font-semibold text-[#2D1F1A] mb-4">Personal Details</p>
+          <div className="space-y-4">
+            <Input
+              label="Full Name"
+              placeholder="Priya Sharma"
+              value={profile.name}
+              onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
+              icon={<User size={15} />}
+            />
+            <Input
+              label="Email Address"
+              placeholder="you@email.com"
+              type="email"
+              value={profile.email}
+              onChange={e => setProfile(p => ({ ...p, email: e.target.value }))}
+              icon={<Mail size={15} />}
+            />
+
+            {/* Locked phone */}
+            <div>
+              <Input
+                label="Phone Number"
+                value={profile.phone || 'Not set'}
+                disabled
+                className="opacity-60 cursor-not-allowed"
+                icon={<Phone size={15} />}
+              />
+              <div className="mt-1.5 flex items-start gap-1.5">
+                <Lock size={11} className="text-[#7A6A64] flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-[#7A6A64]">
+                  Phone number cannot be changed.{' '}
+                  <a href="https://wa.me/917010388736?text=Hi%20Framio!%20I%20need%20to%20update%20my%20phone%20number."
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-[#C4634F] underline underline-offset-2">
+                    Contact support
+                  </a>
+                  {' '}if needed.
+                </p>
+              </div>
             </div>
           </div>
-          <div className="space-y-4">
-            <Input label="Full Name" placeholder="Priya Sharma" value={profile.name}
-              onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} icon={<User size={15} />} />
-            <Input label="Email Address" placeholder="you@email.com" type="email" value={profile.email}
-              onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} />
-            <Input label="Phone Number" value={profile.phone} disabled
-              className="opacity-60 cursor-not-allowed" />
-            <p className="text-xs text-[#7A6A64]">Phone number cannot be changed. Contact support if needed.</p>
-          </div>
+
           <Button onClick={saveProfile} disabled={saving} className="mt-6">
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
             Save Changes
@@ -433,7 +593,6 @@ export default function AccountPage() {
       <div className="space-y-5">
         <h2 className="text-xl font-bold text-[#2D1F1A]">Account Settings</h2>
 
-        {/* Password */}
         <div className="bg-white rounded-2xl border border-[#E8DDD6] p-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -451,7 +610,6 @@ export default function AccountPage() {
           </div>
         </div>
 
-        {/* Notifications */}
         <div className="bg-white rounded-2xl border border-[#E8DDD6] p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-9 h-9 rounded-xl bg-[#F5EDE5] flex items-center justify-center">
@@ -479,7 +637,6 @@ export default function AccountPage() {
           </div>
         </div>
 
-        {/* Privacy */}
         <div className="bg-white rounded-2xl border border-[#E8DDD6] p-5">
           <div className="flex items-center gap-3 mb-1">
             <div className="w-9 h-9 rounded-xl bg-[#F5EDE5] flex items-center justify-center">
@@ -496,7 +653,6 @@ export default function AccountPage() {
           </div>
         </div>
 
-        {/* Danger zone */}
         <div className="bg-white rounded-2xl border border-red-100 p-5">
           <p className="font-semibold text-red-600 text-sm mb-1">Danger Zone</p>
           <p className="text-xs text-[#7A6A64] mb-4">Permanently delete your account and all associated data. This cannot be undone.</p>
@@ -511,11 +667,10 @@ export default function AccountPage() {
     help: (
       <div className="space-y-5">
         <h2 className="text-xl font-bold text-[#2D1F1A]">Help & Support</h2>
-
         <div className="grid sm:grid-cols-2 gap-4">
           {[
-            { icon: <MessageCircle size={20} className="text-green-600" />, bg: 'bg-green-50', label: 'WhatsApp Chat', desc: 'Fastest — usually replies in under 30 min', href: 'https://wa.me/919876543210', cta: 'Chat Now' },
-            { icon: <Mail size={20} className="text-[#C4634F]" />,          bg: 'bg-[#F5EDE5]', label: 'Email Support', desc: 'Replies within 4–6 business hours',           href: 'mailto:hello@framio.shop', cta: 'Send Email' },
+            { icon: <MessageCircle size={20} className="text-green-600" />, bg: 'bg-green-50', label: 'WhatsApp Chat', desc: 'Fastest — usually replies in under 30 min', href: 'https://wa.me/917010388736', cta: 'Chat Now' },
+            { icon: <Mail size={20} className="text-[#C4634F]" />,          bg: 'bg-[#F5EDE5]', label: 'Email Support', desc: 'Replies within 4–6 business hours',          href: 'mailto:hello@framio.shop', cta: 'Send Email' },
           ].map(c => (
             <a key={c.label} href={c.href} target="_blank" rel="noopener noreferrer"
               className="bg-white rounded-2xl border border-[#E8DDD6] p-5 hover:border-[#C4634F]/40 hover:shadow-sm transition-all group">
@@ -528,7 +683,6 @@ export default function AccountPage() {
             </a>
           ))}
         </div>
-
         <div className="bg-white rounded-2xl border border-[#E8DDD6] overflow-hidden">
           <div className="px-5 py-4 border-b border-[#E8DDD6]">
             <p className="font-bold text-[#2D1F1A] text-sm">Quick Help</p>
@@ -547,7 +701,6 @@ export default function AccountPage() {
             </Link>
           ))}
         </div>
-
         <div className="bg-[#F5EDE5] rounded-2xl p-5 flex items-center justify-between">
           <div>
             <p className="font-semibold text-[#2D1F1A] text-sm">Support Hours</p>
@@ -572,9 +725,7 @@ export default function AccountPage() {
             {/* User card */}
             <div className="bg-white rounded-2xl border border-[#E8DDD6] p-5 mb-3">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-[#C4634F] flex items-center justify-center text-white text-lg font-bold flex-shrink-0">
-                  {initials}
-                </div>
+                <AvatarCircle size={48} shape="rounded-xl" />
                 <div className="min-w-0">
                   <p className="font-bold text-[#2D1F1A] text-sm truncate">{profile.name || 'My Account'}</p>
                   <p className="text-xs text-[#7A6A64] truncate">{authUser?.email}</p>
@@ -598,7 +749,6 @@ export default function AccountPage() {
               ))}
             </nav>
 
-            {/* Logout */}
             <button onClick={signOut}
               className="w-full flex items-center gap-3 px-4 py-3 bg-white rounded-2xl border border-[#E8DDD6] text-sm text-[#7A6A64] hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all">
               <LogOut size={16} /> Sign Out
@@ -610,9 +760,7 @@ export default function AccountPage() {
 
             {/* Mobile: user header */}
             <div className="lg:hidden flex items-center gap-3 mb-5">
-              <div className="w-11 h-11 rounded-xl bg-[#C4634F] flex items-center justify-center text-white font-bold flex-shrink-0">
-                {initials}
-              </div>
+              <AvatarCircle size={44} shape="rounded-xl" />
               <div className="min-w-0">
                 <p className="font-bold text-[#2D1F1A] text-sm truncate">{profile.name || 'My Account'}</p>
                 <p className="text-xs text-[#7A6A64] truncate">{authUser?.email}</p>
