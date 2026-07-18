@@ -274,6 +274,7 @@ export default function AdminCustomersPage() {
   const [customers,    setCustomers]    = useState<Customer[]>([]);
   const [total,        setTotal]        = useState(0);
   const [loading,      setLoading]      = useState(true);
+  const [apiError,     setApiError]     = useState<string | null>(null);
   const [search,       setSearch]       = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page,         setPage]         = useState(1);
@@ -282,13 +283,19 @@ export default function AdminCustomersPage() {
 
   const load = useCallback((q: string, s: string, p: number) => {
     setLoading(true);
+    setApiError(null);
     const params = new URLSearchParams({ page: String(p) });
     if (q) params.set('search', q);
     if (s) params.set('status', s);
     fetch(`/api/admin/customers?${params}`)
-      .then(r => r.json())
-      .then(d => { setCustomers(d.customers ?? []); setTotal(d.total ?? 0); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then(async r => {
+        const d = await r.json();
+        if (!r.ok) { setApiError(d.error ?? 'Unknown error'); setLoading(false); return; }
+        setCustomers(d.customers ?? []);
+        setTotal(d.total ?? 0);
+        setLoading(false);
+      })
+      .catch(e => { setApiError(e.message); setLoading(false); });
   }, []);
 
   useEffect(() => { load(search, statusFilter, page); }, [page, statusFilter, load]);
@@ -377,6 +384,21 @@ export default function AdminCustomersPage() {
           </button>
         ))}
       </div>
+
+      {/* API error banner */}
+      {apiError && (
+        <div className="mb-4 flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+          <span className="flex-1">
+            <strong>Error loading customers:</strong> {apiError}
+            {apiError.includes('column') && (
+              <span className="block mt-1 text-xs text-red-500">
+                Run <code className="bg-red-100 px-1 rounded">supabase/customers-migration.sql</code> in your Supabase SQL Editor, then refresh.
+              </span>
+            )}
+          </span>
+          <button onClick={() => load(search, statusFilter, page)} className="flex-shrink-0 underline text-xs">Retry</button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-[#E8DDD6] overflow-hidden">

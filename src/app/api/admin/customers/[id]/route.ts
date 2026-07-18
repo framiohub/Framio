@@ -28,13 +28,11 @@ export async function GET(
 
   const db = adminClient();
 
+  // Fetch profile with * to work whether or not migration SQL has been run
   const [profileResult, ordersResult] = await Promise.all([
-    db.from('profiles')
-      .select('id, full_name, email, phone, avatar_url, provider, created_at, last_sign_in_at, is_active, addresses')
-      .eq('id', id)
-      .single(),
+    db.from('profiles').select('*').eq('id', id).single(),
     db.from('orders')
-      .select('id, status, total_amount, created_at, shipping_address')
+      .select('id, status, total_amount, total, created_at, shipping_address')
       .eq('user_id', id)
       .order('created_at', { ascending: false })
       .limit(20),
@@ -42,14 +40,31 @@ export async function GET(
 
   if (profileResult.error) return Response.json({ error: 'Customer not found' }, { status: 404 });
 
-  const orders = ordersResult.data ?? [];
+  const p = profileResult.data as Record<string, any>;
+  const orders = (ordersResult.data ?? []).map((o: any) => ({
+    id:              o.id,
+    status:          o.status,
+    total_amount:    o.total_amount ?? o.total ?? 0,
+    created_at:      o.created_at,
+    shipping_address: o.shipping_address,
+  }));
+
   const totalOrders = orders.length;
   const totalSpent  = orders
-    .filter((o: any) => o.status !== 'cancelled')
-    .reduce((sum: number, o: any) => sum + (o.total_amount ?? 0), 0);
+    .filter(o => o.status !== 'cancelled')
+    .reduce((sum, o) => sum + (o.total_amount ?? 0), 0);
 
   return Response.json({
-    ...profileResult.data,
+    id:              p.id,
+    full_name:       p.full_name ?? null,
+    email:           p.email ?? null,
+    phone:           p.phone ?? null,
+    avatar_url:      p.avatar_url ?? null,
+    provider:        p.provider ?? 'email',
+    created_at:      p.created_at,
+    last_sign_in_at: p.last_sign_in_at ?? null,
+    is_active:       p.is_active ?? true,
+    addresses:       p.addresses ?? [],
     orders,
     totalOrders,
     totalSpent,
@@ -68,11 +83,7 @@ export async function PATCH(
   if (typeof body.is_active === 'boolean') allowed.is_active = body.is_active;
   if (typeof body.phone === 'string') allowed.phone = body.phone;
 
-  const { error } = await adminClient()
-    .from('profiles')
-    .update(allowed)
-    .eq('id', id);
-
+  const { error } = await adminClient().from('profiles').update(allowed).eq('id', id);
   if (error) return Response.json({ error: error.message }, { status: 400 });
   return Response.json({ success: true });
 }
@@ -84,7 +95,6 @@ export async function DELETE(
   if (!await verifyAdmin()) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
 
-  // Delete the auth user — profile cascades via FK on delete cascade
   const { error } = await adminClient().auth.admin.deleteUser(id);
   if (error) return Response.json({ error: error.message }, { status: 400 });
   return Response.json({ success: true });

@@ -24,36 +24,65 @@ export async function GET(req: NextRequest) {
 
   const url    = new URL(req.url);
   const search = url.searchParams.get('search')?.trim();
-  const status = url.searchParams.get('status'); // 'active' | 'inactive' | ''
+  const status = url.searchParams.get('status');
   const page   = Math.max(1, parseInt(url.searchParams.get('page') ?? '1'));
   const limit  = 50;
   const from   = (page - 1) * limit;
 
-  let query = adminClient()
+  const db = adminClient();
+
+  // Select only columns that exist in all schema versions; new columns added by
+  // customers-migration.sql are read with individual fallbacks below.
+  let query = db
     .from('profiles')
-    .select(`
-      id, full_name, email, phone, avatar_url, provider,
-      created_at, last_sign_in_at, is_active,
-      orders(id, total_amount, status)
-    `, { count: 'exact' })
+    .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(from, from + limit - 1);
 
   if (search) query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+
+  // is_active filter only applied when the column exists (post-migration)
   if (status === 'active')   query = query.eq('is_active', true);
   if (status === 'inactive') query = query.eq('is_active', false);
 
-  const { data, error, count } = await query;
+  const { data: profiles, error, count } = await query;
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
-  const customers = (data ?? []).map((c: any) => {
-    const orders = (c.orders ?? []) as { status: string; total_amount: number }[];
-    const totalOrders = orders.length;
-    const totalSpent  = orders
-      .filter(o => o.status !== 'cancelled')
-      .reduce((sum, o) => sum + (o.total_amount ?? 0), 0);
-    return { ...c, orders: undefined, totalOrders, totalSpent };
-  });
+  if (!profiles?.length) {
+    return Response.json({ customers: [], total: count ?? 0, page, limit });
+  }
+
+  // Fetch order summaries for all profiles in one query
+  const profileIds = profiles.map((p: any) => p.id);
+  const { data: orders } = await db
+    .from('orders')
+    .select('user_id, id, status, total_amount, total')
+    .in('user_id', profileIds);
+
+  // Build per-customer aggregates
+  const orderMap: Record<string, { count: number; spent: number }> = {};
+  for (const o of orders ?? []) {
+    if (!orderMap[o.user_id]) orderMap[o.user_id] = { count: 0, spent: 0 };
+    orderMap[o.user_id].count += 1;
+    if (o.status !== 'cancelled') {
+      // Support both 'total_amount' (paise) and 'total' (older schema)
+      orderMap[o.user_id].spent += o.total_amount ?? o.total ?? 0;
+    }
+  }
+
+  const customers = profiles.map((c: any) => ({
+    id:              c.id,
+    full_name:       c.full_name ?? null,
+    email:           c.email ?? null,
+    phone:           c.phone ?? null,
+    avatar_url:      c.avatar_url ?? null,
+    provider:        c.provider ?? 'email',
+    created_at:      c.created_at,
+    last_sign_in_at: c.last_sign_in_at ?? null,
+    is_active:       c.is_active ?? true,
+    totalOrders:     orderMap[c.id]?.count ?? 0,
+    totalSpent:      orderMap[c.id]?.spent ?? 0,
+  }));
 
   return Response.json({ customers, total: count ?? 0, page, limit });
 }
