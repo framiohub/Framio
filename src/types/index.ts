@@ -11,7 +11,7 @@ export interface ProductSize {
 
 export interface ProductMaterial {
   label: string;
-  value: FrameMaterial;
+  value: string;
   priceAdder: number;
   color: string;
 }
