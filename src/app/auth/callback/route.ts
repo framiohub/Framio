@@ -55,7 +55,6 @@ export async function GET(request: NextRequest) {
         const isNewCustomer  = Math.abs(lastSignInAt - createdAt) < 5000; // within 5 s → fresh account
 
         // Always sync the latest Google profile data on every OAuth sign-in.
-        // Uses upsert so it works for both new registrations and returning users.
         await admin.from('profiles').upsert(
           {
             id:              user.id,
@@ -71,10 +70,27 @@ export async function GET(request: NextRequest) {
           { onConflict: 'id' }
         );
 
-        // TODO: send welcome email for new customers once an email provider
-        // (Resend / SendGrid) is configured.
-        // if (isNewCustomer) { await sendWelcomeEmail(user.email); }
-        void isNewCustomer; // suppress unused-var lint until email is wired up
+        // Check if the user already has a phone number on file
+        const { data: profile } = await admin
+          .from('profiles')
+          .select('phone')
+          .eq('id', user.id)
+          .single();
+
+        const hasPhone = !!(profile?.phone);
+
+        // Don't gate password-recovery flows on phone collection
+        if (!hasPhone && type !== 'recovery') {
+          const phoneUrl = new URL('/auth/phone', origin);
+          phoneUrl.searchParams.set('next', next);
+          if (isNewCustomer) phoneUrl.searchParams.set('new', '1');
+          const phoneRedirect = NextResponse.redirect(phoneUrl);
+          response.cookies.getAll().forEach(c => phoneRedirect.cookies.set(c.name, c.value));
+          return phoneRedirect;
+        }
+
+        // User already has phone — nothing more to do for returning users.
+        // Welcome email would have been sent when they first verified their phone.
       }
 
       return response;

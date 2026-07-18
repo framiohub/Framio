@@ -66,7 +66,7 @@ export default function LoginPage({
     }
 
     // Customer login — Supabase Auth
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
 
     if (error) {
@@ -77,6 +77,21 @@ export default function LoginPage({
       );
       return;
     }
+
+    // Gate on phone collection if the customer hasn't added one yet
+    if (signInData.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('phone')
+        .eq('id', signInData.user.id)
+        .single();
+
+      if (!profile?.phone) {
+        router.replace(`/auth/phone?next=${encodeURIComponent(redirectTo)}`);
+        return;
+      }
+    }
+
     router.replace(redirectTo);
   };
 

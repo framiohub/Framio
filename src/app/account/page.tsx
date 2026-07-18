@@ -10,7 +10,7 @@ import {
   LayoutDashboard, Package, Heart, MapPin, User, Settings,
   HelpCircle, LogOut, ChevronRight, Loader2, Save, Plus,
   MessageCircle, Mail, Phone, Shield, Bell, Lock,
-  ArrowRight, Star, Trash2, Edit3, Camera,
+  ArrowRight, Star, Trash2, Edit3, Camera, CheckCircle, RefreshCw, X,
 } from 'lucide-react';
 
 const AdminIcon = LayoutDashboard;
@@ -60,6 +60,15 @@ export default function AccountPage() {
   const [addresses,  setAddresses]  = useState<Address[]>([]);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  /* phone edit state */
+  const [phoneStep,    setPhoneStep]    = useState<'idle' | 'input' | 'otp'>('idle');
+  const [newPhone,     setNewPhone]     = useState('');
+  const [phoneOtp,     setPhoneOtp]     = useState(['', '', '', '', '', '']);
+  const [phoneLoading, setPhoneLoading] = useState(false);
+  const [phoneTimer,   setPhoneTimer]   = useState(0);
+  const phoneOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const phoneTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* address form state */
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -148,19 +157,91 @@ export default function AccountPage() {
     setUploading(false);
   };
 
+  /* ── Phone edit helpers ─────────────────────────────────────── */
+  const phoneE164 = `+91${newPhone.replace(/\D/g, '')}`;
+
+  const startPhoneTimer = () => {
+    setPhoneTimer(30);
+    if (phoneTimerRef.current) clearInterval(phoneTimerRef.current);
+    phoneTimerRef.current = setInterval(() => {
+      setPhoneTimer(s => { if (s <= 1) { clearInterval(phoneTimerRef.current!); return 0; } return s - 1; });
+    }, 1000);
+  };
+
+  const sendPhoneOtp = async () => {
+    const digits = newPhone.replace(/\D/g, '');
+    if (digits.length !== 10) { toast.error('Enter a valid 10-digit number'); return; }
+    setPhoneLoading(true);
+    const { error } = await supabase.auth.updateUser({ phone: phoneE164 });
+    setPhoneLoading(false);
+    if (error) {
+      // SMS provider not configured — save directly
+      if (error.message.toLowerCase().includes('sms') || error.message.toLowerCase().includes('provider')) {
+        await savePhoneDirect();
+        return;
+      }
+      toast.error(error.message); return;
+    }
+    setPhoneOtp(['', '', '', '', '', '']);
+    setPhoneStep('otp');
+    startPhoneTimer();
+    setTimeout(() => phoneOtpRefs.current[0]?.focus(), 100);
+  };
+
+  const savePhoneDirect = async () => {
+    const res = await fetch('/api/auth/save-phone', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phoneE164 }),
+    });
+    if (res.ok) {
+      setProfile(p => ({ ...p, phone: phoneE164 }));
+      setPhoneStep('idle'); setNewPhone('');
+      toast.success('Phone number updated!');
+    } else {
+      toast.error('Could not save phone number.');
+    }
+  };
+
+  const verifyPhoneOtp = async () => {
+    const token = phoneOtp.join('');
+    if (token.length !== 6) { toast.error('Enter the 6-digit code'); return; }
+    setPhoneLoading(true);
+    const { error } = await supabase.auth.verifyOtp({ phone: phoneE164, token, type: 'phone_change' });
+    setPhoneLoading(false);
+    if (error) { toast.error(error.message); return; }
+    if (authUser) {
+      await supabase.from('profiles').upsert({ id: authUser.id, phone: phoneE164, updated_at: new Date().toISOString() });
+    }
+    setProfile(p => ({ ...p, phone: phoneE164 }));
+    setPhoneStep('idle'); setNewPhone(''); setPhoneOtp(['', '', '', '', '', '']);
+    toast.success('Phone number verified and updated!');
+  };
+
+  const handlePhoneOtpInput = (i: number, val: string) => {
+    const d = val.replace(/\D/g, '').slice(-1);
+    const next = [...phoneOtp]; next[i] = d; setPhoneOtp(next);
+    if (d && i < 5) phoneOtpRefs.current[i + 1]?.focus();
+  };
+  const handlePhoneOtpKey = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !phoneOtp[i] && i > 0) phoneOtpRefs.current[i - 1]?.focus();
+  };
+  const handlePhoneOtpPaste = (e: React.ClipboardEvent) => {
+    const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (text.length === 6) { setPhoneOtp(text.split('')); phoneOtpRefs.current[5]?.focus(); }
+    e.preventDefault();
+  };
+
   /* ── Save profile ───────────────────────────────────────────── */
   const saveProfile = async () => {
     if (!authUser) return;
     setSaving(true);
     const { error } = await supabase.from('profiles').upsert({
-      id:         authUser.id,
-      name:       profile.name,
-      full_name:  profile.name,   // keep both columns in sync
-      email:      profile.email,
-      updated_at: new Date().toISOString(),
+      id:        authUser.id,
+      full_name: profile.name,
+      email:     profile.email,
     });
     setSaving(false);
-    if (error) toast.error('Failed to save profile');
+    if (error) toast.error('Failed to save: ' + error.message);
     else toast.success('Profile updated!');
   };
 
@@ -556,27 +637,94 @@ export default function AccountPage() {
               icon={<Mail size={15} />}
             />
 
-            {/* Locked phone */}
+            {/* Editable phone with inline OTP */}
             <div>
-              <Input
-                label="Phone Number"
-                value={profile.phone || 'Not set'}
-                disabled
-                className="opacity-60 cursor-not-allowed"
-                icon={<Phone size={15} />}
-              />
-              <div className="mt-1.5 flex items-start gap-1.5">
-                <Lock size={11} className="text-[#7A6A64] flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-[#7A6A64]">
-                  Phone number cannot be changed.{' '}
-                  <a href="https://wa.me/917010388736?text=Hi%20Framio!%20I%20need%20to%20update%20my%20phone%20number."
-                    target="_blank" rel="noopener noreferrer"
-                    className="text-[#C4634F] underline underline-offset-2">
-                    Contact support
-                  </a>
-                  {' '}if needed.
-                </p>
-              </div>
+              <label className="block text-sm font-medium text-[#2D1F1A] mb-1.5">Phone Number</label>
+
+              {phoneStep === 'idle' && (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 flex items-center gap-2 h-11 px-3 rounded-xl border border-[#E8DDD6] bg-[#F5EDE5]/50 text-sm text-[#2D1F1A]">
+                    <Phone size={14} className="text-[#7A6A64] flex-shrink-0" />
+                    <span className={profile.phone ? 'text-[#2D1F1A]' : 'text-[#7A6A64]'}>
+                      {profile.phone || 'Not added yet'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => { setNewPhone(''); setPhoneStep('input'); }}
+                    className="h-11 px-4 rounded-xl border-2 border-[#E8DDD6] text-sm font-semibold text-[#2D1F1A] hover:border-[#C4634F]/50 hover:bg-[#F5EDE5] transition-all flex-shrink-0 flex items-center gap-1.5"
+                  >
+                    <Edit3 size={13} />
+                    {profile.phone ? 'Change' : 'Add'}
+                  </button>
+                </div>
+              )}
+
+              {phoneStep === 'input' && (
+                <div className="rounded-2xl border-2 border-[#C4634F]/30 bg-[#FDF8F4] p-4 space-y-3">
+                  <p className="text-xs font-semibold text-[#7A6A64] uppercase tracking-wide">Enter new mobile number</p>
+                  <div className="flex items-center border-2 border-[#E8DDD6] rounded-xl overflow-hidden focus-within:border-[#C4634F] transition-colors bg-white">
+                    <span className="px-3 py-2.5 bg-[#F5EDE5] text-sm font-semibold text-[#2D1F1A] border-r border-[#E8DDD6] flex-shrink-0">🇮🇳 +91</span>
+                    <input
+                      type="tel" inputMode="numeric" maxLength={10} autoFocus
+                      placeholder="98765 43210"
+                      value={newPhone}
+                      onChange={e => setNewPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      onKeyDown={e => e.key === 'Enter' && sendPhoneOtp()}
+                      className="flex-1 px-3 py-2.5 text-sm text-[#2D1F1A] outline-none bg-white placeholder:text-[#C9B8B0]"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={sendPhoneOtp} disabled={phoneLoading}
+                      className="flex items-center gap-1.5 bg-[#C4634F] hover:bg-[#b5574a] text-white text-sm font-bold px-4 py-2 rounded-xl disabled:opacity-60 transition-colors">
+                      {phoneLoading ? <Loader2 size={13} className="animate-spin" /> : <Phone size={13} />}
+                      Send OTP
+                    </button>
+                    <button onClick={() => { setPhoneStep('idle'); setNewPhone(''); }}
+                      className="flex items-center gap-1 text-sm text-[#7A6A64] hover:text-[#2D1F1A] px-3 py-2 rounded-xl border border-[#E8DDD6] hover:border-[#2D1F1A]/30 transition-colors">
+                      <X size={13} /> Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {phoneStep === 'otp' && (
+                <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
+                  <p className="text-xs font-semibold text-[#7A6A64] uppercase tracking-wide">
+                    Enter 6-digit code sent to +91 {newPhone}
+                  </p>
+                  <div className="flex gap-1.5" onPaste={handlePhoneOtpPaste}>
+                    {phoneOtp.map((d, i) => (
+                      <input key={i}
+                        ref={el => { phoneOtpRefs.current[i] = el; }}
+                        type="text" inputMode="numeric" maxLength={1}
+                        value={d}
+                        onChange={e => handlePhoneOtpInput(i, e.target.value)}
+                        onKeyDown={e => handlePhoneOtpKey(i, e)}
+                        className="w-10 text-center text-base font-bold border-2 border-[#E8DDD6] rounded-xl focus:border-[#C4634F] focus:outline-none transition-colors bg-white"
+                        style={{ height: '42px' }}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <button onClick={verifyPhoneOtp} disabled={phoneLoading || phoneOtp.join('').length !== 6}
+                      className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-xl disabled:opacity-60 transition-colors">
+                      {phoneLoading ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />}
+                      Verify
+                    </button>
+                    <button onClick={() => { setPhoneStep('input'); setPhoneOtp(['','','','','','']); }}
+                      className="text-xs text-[#7A6A64] hover:text-[#2D1F1A] flex items-center gap-1">
+                      ← Change number
+                    </button>
+                    {phoneTimer > 0
+                      ? <span className="text-xs text-[#7A6A64]">Resend in {phoneTimer}s</span>
+                      : <button onClick={() => { setPhoneOtp(['','','','','','']); sendPhoneOtp(); }}
+                          className="text-xs text-[#C4634F] font-semibold hover:underline flex items-center gap-1">
+                          <RefreshCw size={11} /> Resend
+                        </button>
+                    }
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
