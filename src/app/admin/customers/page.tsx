@@ -53,9 +53,24 @@ function formatRupees(paise: number) {
   return `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 }
 
+// Derive a human-readable display name from email when full_name is absent.
+// e.g. "mohammed.farhan.d@gmail.com" → "Mohammed Farhan D"
+function displayName(name: string | null, email: string | null): string {
+  if (name?.trim()) return name.trim();
+  if (!email) return 'Unknown';
+  const local = email.split('@')[0]; // e.g. "mohammed.farhan.d"
+  return local
+    .replace(/[._-]+/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .trim();
+}
+
 function initials(name: string | null, email: string | null) {
-  const src = name || email || '?';
-  return src.slice(0, 2).toUpperCase();
+  const src = displayName(name, email);
+  const parts = src.split(' ');
+  return parts.length >= 2
+    ? (parts[0][0] + parts[1][0]).toUpperCase()
+    : src.slice(0, 2).toUpperCase();
 }
 
 const PROVIDER_LABEL: Record<string, string> = {
@@ -143,7 +158,7 @@ function DetailPanel({
               <div className="flex items-start gap-4">
                 <Avatar src={data.avatar_url} name={data.full_name} email={data.email} size={56} />
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-[#2D1F1A] text-base truncate">{data.full_name || '(No name)'}</p>
+                  <p className="font-bold text-[#2D1F1A] text-base truncate">{displayName(data.full_name, data.email)}</p>
                   <p className="text-[#7A6A64] text-sm truncate">{data.email}</p>
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -251,7 +266,7 @@ function DetailPanel({
               </a>
               <button
                 onClick={() => {
-                  if (confirm(`Delete ${data.full_name || data.email}? This cannot be undone.`)) {
+                  if (confirm(`Delete ${displayName(data.full_name, data.email)}? This cannot be undone.`)) {
                     onDelete(data.id);
                     onClose();
                   }
@@ -436,7 +451,7 @@ export default function AdminCustomersPage() {
                     <div className="flex items-center gap-3">
                       <Avatar src={c.avatar_url} name={c.full_name} email={c.email} size={34} />
                       <span className="font-medium text-sm text-[#2D1F1A] whitespace-nowrap">
-                        {c.full_name || <span className="text-[#7A6A64] italic text-xs">No name</span>}
+                        {displayName(c.full_name, c.email)}
                       </span>
                     </div>
                   </td>
@@ -488,7 +503,7 @@ export default function AdminCustomersPage() {
                       </button>
                       <button
                         onClick={() => {
-                          if (confirm(`Delete ${c.full_name || c.email}? This cannot be undone.`))
+                          if (confirm(`Delete ${displayName(c.full_name, c.email)}? This cannot be undone.`))
                             handleDelete(c.id);
                         }}
                         className="p-1.5 hover:bg-red-50 rounded-lg transition-colors text-red-400 hover:text-red-600"
