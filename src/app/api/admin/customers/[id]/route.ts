@@ -25,10 +25,8 @@ export async function GET(
 ) {
   if (!await verifyAdmin()) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
-
   const db = adminClient();
 
-  // Fetch profile with * to work whether or not migration SQL has been run
   const [profileResult, ordersResult] = await Promise.all([
     db.from('profiles').select('*').eq('id', id).single(),
     db.from('orders')
@@ -42,10 +40,10 @@ export async function GET(
 
   const p = profileResult.data as Record<string, any>;
   const orders = (ordersResult.data ?? []).map((o: any) => ({
-    id:              o.id,
-    status:          o.status,
-    total_amount:    o.total_amount ?? o.total ?? 0,
-    created_at:      o.created_at,
+    id:               o.id,
+    status:           o.status,
+    total_amount:     o.total_amount ?? o.total ?? 0,
+    created_at:       o.created_at,
     shipping_address: o.shipping_address,
   }));
 
@@ -94,8 +92,30 @@ export async function DELETE(
 ) {
   if (!await verifyAdmin()) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
+  const db = adminClient();
 
-  const { error } = await adminClient().auth.admin.deleteUser(id);
+  // 1. Anonymise business records (orders, reviews) — preserve for reporting
+  //    but unlink them from the deleted user
+  await Promise.allSettled([
+    db.from('orders').update({ user_id: null }).eq('user_id', id),
+    db.from('reviews').update({ user_id: null }).eq('user_id', id),
+  ]);
+
+  // 2. Hard-delete personal / session data
+  await Promise.allSettled([
+    db.from('wishlists').delete().eq('user_id', id),
+    db.from('saved_designs').delete().eq('user_id', id),
+  ]);
+
+  // 3. Delete the profile row explicitly (auth delete cascades it anyway,
+  //    but explicit removal guarantees no race with FK constraints)
+  await db.from('profiles').delete().eq('id', id);
+
+  // 4. Delete the auth user — removes ALL linked OAuth identities (Google,
+  //    email, etc.) so the same Google account is treated as a brand-new
+  //    user on the next sign-in and gets a fresh UUID + customer record.
+  const { error } = await db.auth.admin.deleteUser(id);
   if (error) return Response.json({ error: error.message }, { status: 400 });
+
   return Response.json({ success: true });
 }

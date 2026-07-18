@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get('code');
-  const type = searchParams.get('type');
-  const next = searchParams.get('next') ?? '/account';
+  const code  = searchParams.get('code');
+  const type  = searchParams.get('type');
+  const next  = searchParams.get('next') ?? '/account';
   const error = searchParams.get('error');
   const errorDescription = searchParams.get('error_description');
 
@@ -40,23 +40,43 @@ export async function GET(request: NextRequest) {
 
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
     if (!exchangeError) {
-      // Upsert customer profile so every OAuth user is auto-registered
       const { data: { user } } = await supabase.auth.getUser();
+
       if (user) {
         const admin = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           process.env.SUPABASE_SERVICE_ROLE_KEY!
         );
-        await admin.from('profiles').upsert({
-          id:               user.id,
-          email:            user.email ?? null,
-          full_name:        user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
-          avatar_url:       user.user_metadata?.avatar_url ?? null,
-          provider:         user.app_metadata?.provider ?? 'email',
-          last_sign_in_at:  new Date().toISOString(),
-          is_active:        true,
-        }, { onConflict: 'id' });
+
+        // Detect if this is a brand-new sign-up (including re-registrations
+        // after an admin deleted the account — Supabase issues a new UUID).
+        const createdAt      = new Date(user.created_at).getTime();
+        const lastSignInAt   = user.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : createdAt;
+        const isNewCustomer  = Math.abs(lastSignInAt - createdAt) < 5000; // within 5 s → fresh account
+
+        // Always sync the latest Google profile data on every OAuth sign-in.
+        // Uses upsert so it works for both new registrations and returning users.
+        await admin.from('profiles').upsert(
+          {
+            id:              user.id,
+            email:           user.email ?? null,
+            full_name:       user.user_metadata?.full_name
+                          ?? user.user_metadata?.name
+                          ?? null,
+            avatar_url:      user.user_metadata?.avatar_url ?? null,
+            provider:        user.app_metadata?.provider ?? 'email',
+            last_sign_in_at: new Date().toISOString(),
+            is_active:       true,
+          },
+          { onConflict: 'id' }
+        );
+
+        // TODO: send welcome email for new customers once an email provider
+        // (Resend / SendGrid) is configured.
+        // if (isNewCustomer) { await sendWelcomeEmail(user.email); }
+        void isNewCustomer; // suppress unused-var lint until email is wired up
       }
+
       return response;
     }
   }
