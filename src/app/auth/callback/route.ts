@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -38,7 +39,26 @@ export async function GET(request: NextRequest) {
     );
 
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-    if (!exchangeError) return response;
+    if (!exchangeError) {
+      // Upsert customer profile so every OAuth user is auto-registered
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const admin = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+        await admin.from('profiles').upsert({
+          id:               user.id,
+          email:            user.email ?? null,
+          full_name:        user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
+          avatar_url:       user.user_metadata?.avatar_url ?? null,
+          provider:         user.app_metadata?.provider ?? 'email',
+          last_sign_in_at:  new Date().toISOString(),
+          is_active:        true,
+        }, { onConflict: 'id' });
+      }
+      return response;
+    }
   }
 
   const fallback = new URL('/auth/login', origin);
