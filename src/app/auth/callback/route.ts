@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { sendWelcomeEmail } from '@/lib/email';
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -89,8 +90,12 @@ export async function GET(request: NextRequest) {
           return phoneRedirect;
         }
 
-        // User already has phone — nothing more to do for returning users.
-        // Welcome email would have been sent when they first verified their phone.
+        // User already has a phone. If brand-new, send welcome email directly
+        // (they won't go through the phone page which normally fires it).
+        if (isNewCustomer && hasPhone) {
+          const name = user.user_metadata?.full_name ?? user.user_metadata?.name ?? null;
+          void sendWelcomeEmail(user.email, name);
+        }
       }
 
       return response;

@@ -57,7 +57,7 @@ export default function SignupPage({
     if (form.password !== form.confirmPassword) { toast.error('Passwords do not match'); return; }
 
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
       options: {
@@ -65,20 +65,30 @@ export default function SignupPage({
           full_name: form.name.trim(),
           phone: form.phone.replace(/\D/g, '') || null,
         },
+        // Kept as fallback in case email confirmation is still enabled
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
       },
     });
     setLoading(false);
 
     if (error) {
+      const msg = typeof error.message === 'string' ? error.message : '';
       toast.error(
-        error.message.includes('already registered')
+        msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('user already registered')
           ? 'This email is already registered. Try logging in.'
-          : error.message
+          : msg || 'Something went wrong. Please try again.'
       );
       return;
     }
 
+    if (data.session) {
+      // Email confirmation is disabled — user is signed in immediately.
+      // Redirect to phone verification page which sends the welcome email.
+      router.replace(`/auth/phone?next=${encodeURIComponent(redirectTo)}&new=1`);
+      return;
+    }
+
+    // Email confirmation still enabled — show "check your inbox" screen
     setEmailSent(true);
   };
 

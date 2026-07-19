@@ -78,12 +78,20 @@ export default function LoginPage({
       return;
     }
 
-    // Gate on phone collection if the customer hasn't added one yet
     if (signInData.user) {
+      const uid = signInData.user.id;
+
+      // Update last_sign_in_at in profiles so admin always sees current time
+      // (fire and forget — failure is non-critical)
+      void supabase.from('profiles')
+        .update({ last_sign_in_at: new Date().toISOString() })
+        .eq('id', uid);
+
+      // Gate on phone collection if not set yet
       const { data: profile } = await supabase
         .from('profiles')
         .select('phone')
-        .eq('id', signInData.user.id)
+        .eq('id', uid)
         .single();
 
       if (!profile?.phone) {
