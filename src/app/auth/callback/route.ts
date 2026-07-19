@@ -55,14 +55,14 @@ export async function GET(request: NextRequest) {
         const lastSignInAt   = user.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : createdAt;
         const isNewCustomer  = Math.abs(lastSignInAt - createdAt) < 5000; // within 5 s → fresh account
 
+        const name = user.user_metadata?.full_name ?? user.user_metadata?.name ?? null;
+
         // Always sync the latest Google profile data on every OAuth sign-in.
         await admin.from('profiles').upsert(
           {
             id:              user.id,
             email:           user.email ?? null,
-            full_name:       user.user_metadata?.full_name
-                          ?? user.user_metadata?.name
-                          ?? null,
+            full_name:       name,
             avatar_url:      user.user_metadata?.avatar_url ?? null,
             provider:        user.app_metadata?.provider ?? 'email',
             last_sign_in_at: new Date().toISOString(),
@@ -70,6 +70,13 @@ export async function GET(request: NextRequest) {
           },
           { onConflict: 'id' }
         );
+
+        // Send welcome email immediately for new customers — do NOT delegate
+        // this to the phone page because users can skip it or the SMS path
+        // may vary. Fire-and-forget so it never blocks the redirect.
+        if (isNewCustomer) {
+          void sendWelcomeEmail(user.email, name);
+        }
 
         // Check if the user already has a phone number on file
         const { data: profile } = await admin
@@ -80,21 +87,13 @@ export async function GET(request: NextRequest) {
 
         const hasPhone = !!(profile?.phone);
 
-        // Don't gate password-recovery flows on phone collection
+        // Gate on phone collection (skip for password-recovery flows)
         if (!hasPhone && type !== 'recovery') {
           const phoneUrl = new URL('/auth/phone', origin);
           phoneUrl.searchParams.set('next', next);
-          if (isNewCustomer) phoneUrl.searchParams.set('new', '1');
           const phoneRedirect = NextResponse.redirect(phoneUrl);
           response.cookies.getAll().forEach(c => phoneRedirect.cookies.set(c.name, c.value));
           return phoneRedirect;
-        }
-
-        // User already has a phone. If brand-new, send welcome email directly
-        // (they won't go through the phone page which normally fires it).
-        if (isNewCustomer && hasPhone) {
-          const name = user.user_metadata?.full_name ?? user.user_metadata?.name ?? null;
-          void sendWelcomeEmail(user.email, name);
         }
       }
 

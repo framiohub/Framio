@@ -82,9 +82,11 @@ export default function SignupPage({
     }
 
     if (data.session) {
-      // Email confirmation is disabled — user is signed in immediately.
-      // Redirect to phone verification page which sends the welcome email.
-      router.replace(`/auth/phone?next=${encodeURIComponent(redirectTo)}&new=1`);
+      // Email confirmation disabled — user is signed in immediately.
+      // Send welcome email NOW (don't rely on phone page — user can skip it).
+      await fetch('/api/auth/welcome-email', { method: 'POST' });
+      // Then collect their phone number
+      router.replace(`/auth/phone?next=${encodeURIComponent(redirectTo)}`);
       return;
     }
 

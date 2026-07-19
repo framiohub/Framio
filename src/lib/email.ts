@@ -115,15 +115,15 @@ function welcomeHtml(name: string, email: string): string {
 }
 
 export async function sendWelcomeEmail(email: string | null | undefined, name: string | null | undefined) {
-  if (!email) return;
+  if (!email) { console.warn('[Framio] sendWelcomeEmail: no email provided'); return; }
   const key = process.env.RESEND_API_KEY;
   if (!key) {
-    console.warn('[Framio] RESEND_API_KEY not set — welcome email skipped');
+    console.error('[Framio] RESEND_API_KEY is not set — welcome email NOT sent to', email);
     return;
   }
 
   try {
-    await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${key}`,
@@ -136,7 +136,13 @@ export async function sendWelcomeEmail(email: string | null | undefined, name: s
         html: welcomeHtml(name ?? '', email),
       }),
     });
-  } catch {
-    // Email is non-critical — never block the auth flow
+    const json = await res.json();
+    if (!res.ok) {
+      console.error('[Framio] Resend error:', json);
+    } else {
+      console.log('[Framio] Welcome email sent:', json.id, '→', email);
+    }
+  } catch (err) {
+    console.error('[Framio] sendWelcomeEmail exception:', err);
   }
 }
