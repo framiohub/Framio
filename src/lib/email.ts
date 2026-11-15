@@ -2,6 +2,8 @@
 // Add RESEND_API_KEY to Vercel environment variables.
 // The "from" domain (framio.shop) must be verified in your Resend dashboard.
 
+import { whatsappLink } from './contact';
+
 function welcomeHtml(name: string, email: string): string {
   const displayName = name || email.split('@')[0];
   return `<!DOCTYPE html>
@@ -80,21 +82,21 @@ function welcomeHtml(name: string, email: string): string {
                 <p style="margin:0;font-size:12px;font-weight:700;color:#2D1F1A;">My Account</p>
               </a>
             </td>
-            <td width="33%" align="center" style="padding:0 6px;">
-              <a href="https://wa.me/917010388736"
+            ${whatsappLink() ? `<td width="33%" align="center" style="padding:0 6px;">
+              <a href="${whatsappLink()}"
                 style="display:block;background:#F5EDE5;border-radius:12px;padding:16px 8px;text-decoration:none;">
                 <p style="margin:0 0 4px;font-size:18px;">💬</p>
                 <p style="margin:0;font-size:12px;font-weight:700;color:#2D1F1A;">Support</p>
               </a>
-            </td>
+            </td>` : ''}
           </tr>
         </table>
 
         <hr style="border:none;border-top:1px solid #E8DDD6;margin:0 0 24px;" />
 
         <p style="margin:0;font-size:13px;color:#7A6A64;line-height:1.7;text-align:center;">
-          Questions? Chat with us on <a href="https://wa.me/917010388736" style="color:#C4634F;text-decoration:none;font-weight:600;">WhatsApp</a>
-          or email <a href="mailto:hello@framio.shop" style="color:#C4634F;text-decoration:none;font-weight:600;">hello@framio.shop</a><br />
+          Questions? ${whatsappLink() ? `Chat with us on <a href="${whatsappLink()}" style="color:#C4634F;text-decoration:none;font-weight:600;">WhatsApp</a>
+          or email` : 'Email us at'} <a href="mailto:hello@framio.shop" style="color:#C4634F;text-decoration:none;font-weight:600;">hello@framio.shop</a><br />
           Mon – Sat &middot; 9 AM – 8 PM IST
         </p>
       </td></tr>

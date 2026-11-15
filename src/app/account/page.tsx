@@ -2,6 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
+import { whatsappLink } from '@/lib/contact';
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -817,7 +818,7 @@ export default function AccountPage() {
         <h2 className="text-xl font-bold text-[#2D1F1A]">Help & Support</h2>
         <div className="grid sm:grid-cols-2 gap-4">
           {[
-            { icon: <MessageCircle size={20} className="text-green-600" />, bg: 'bg-green-50', label: 'WhatsApp Chat', desc: 'Fastest — usually replies in under 30 min', href: 'https://wa.me/917010388736', cta: 'Chat Now' },
+            ...(whatsappLink() ? [{ icon: <MessageCircle size={20} className="text-green-600" />, bg: 'bg-green-50', label: 'WhatsApp Chat', desc: 'Fastest — usually replies in under 30 min', href: whatsappLink()!, cta: 'Chat Now' }] : []),
             { icon: <Mail size={20} className="text-[#C4634F]" />,          bg: 'bg-[#F5EDE5]', label: 'Email Support', desc: 'Replies within 4–6 business hours',          href: 'mailto:hello@framio.shop', cta: 'Send Email' },
           ].map(c => (
             <a key={c.label} href={c.href} target="_blank" rel="noopener noreferrer"

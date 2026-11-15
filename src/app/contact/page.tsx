@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Mail, Phone, MapPin, MessageCircle, Clock, Send, Loader2, CheckCircle, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { PHONE_DISPLAY, whatsappLink } from '@/lib/contact';
 
 const FAQS = [
   {
@@ -100,8 +101,9 @@ export default function ContactPage() {
 
             {/* Quick contact cards */}
             <div className="space-y-4">
+              {whatsappLink() && (
               <a
-                href="https://wa.me/919876543210?text=Hi!%20I%20need%20help%20with%20my%20Framio%20order."
+                href={whatsappLink('Hi! I need help with my Framio order.')!}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-start gap-4 bg-white rounded-2xl p-5 border border-[#E8DDD6] hover:border-[#C4634F]/40 hover:shadow-sm transition-all group"
@@ -111,10 +113,11 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-[#2D1F1A] text-sm group-hover:text-[#C4634F] transition-colors">WhatsApp Support</p>
-                  <p className="text-[#7A6A64] text-sm mt-0.5">+91 98765 43210</p>
+                  {PHONE_DISPLAY && <p className="text-[#7A6A64] text-sm mt-0.5">{PHONE_DISPLAY}</p>}
                   <p className="text-[#7A6A64] text-xs mt-1">Fastest way to reach us — usually replies in &lt;30 min</p>
                 </div>
               </a>
+              )}
 
               <a
                 href="mailto:hello@framio.shop"
@@ -186,7 +189,7 @@ export default function ContactPage() {
                 <p className="text-[#7A6A64] mb-1">Thanks for reaching out, {form.name.split(' ')[0]}.</p>
                 <p className="text-[#7A6A64] text-sm mb-8">
                   We'll reply to <span className="font-semibold text-[#2D1F1A]">{form.email}</span> within a few hours.
-                  For urgent matters, WhatsApp us directly.
+                  {whatsappLink() && 'For urgent matters, WhatsApp us directly.'}
                 </p>
                 <div className="flex flex-wrap gap-3 justify-center">
                   <Button variant="outline" onClick={() => { setSent(false); setForm({ name: '', email: '', subject: '', message: '' }); }}>
@@ -269,10 +272,11 @@ export default function ContactPage() {
                     )}
                   </Button>
 
+                  {whatsappLink() && (
                   <p className="text-xs text-[#7A6A64] text-center">
                     Or reach us instantly on{' '}
                     <a
-                      href="https://wa.me/919876543210"
+                      href={whatsappLink()!}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[#C4634F] font-semibold hover:underline"
@@ -280,6 +284,7 @@ export default function ContactPage() {
                       WhatsApp
                     </a>
                   </p>
+                  )}
                 </form>
               </div>
             )}

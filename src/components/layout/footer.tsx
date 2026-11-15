@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, Phone, Mail } from 'lucide-react';
+import { PHONE_DISPLAY, whatsappLink } from '@/lib/contact';
 
 export function Footer() {
+  const waHref = whatsappLink("Hi Framio! I'm interested in your personalized photo frames. Can you help me?");
   return (
     <footer className="bg-[#2D1F1A] text-white mt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 md:py-12">
@@ -76,17 +78,20 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <h3 className="text-sm font-semibold text-white mb-2.5 md:mb-4">Contact Us</h3>
             <ul className="flex flex-row flex-wrap gap-x-5 gap-y-2 md:flex-col md:gap-3">
-              <li className="flex items-center gap-1.5 text-xs md:text-sm text-white/60">
-                <Phone size={12} className="text-[#C9A84C] flex-shrink-0" />
-                <span>+91 70103 88736</span>
-              </li>
+              {PHONE_DISPLAY && (
+                <li className="flex items-center gap-1.5 text-xs md:text-sm text-white/60">
+                  <Phone size={12} className="text-[#C9A84C] flex-shrink-0" />
+                  <span>{PHONE_DISPLAY}</span>
+                </li>
+              )}
               <li className="flex items-center gap-1.5 text-xs md:text-sm text-white/60">
                 <Mail size={12} className="text-[#C9A84C] flex-shrink-0" />
                 <span>hello@framio.shop</span>
               </li>
             </ul>
+            {waHref && (
             <a
-              href="https://wa.me/917010388736?text=Hi%20Framio!%20I%27m%20interested%20in%20your%20personalized%20photo%20frames.%20Can%20you%20help%20me%3F"
+              href={waHref}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#25D366] text-xs font-medium transition-colors"
@@ -96,6 +101,7 @@ export function Footer() {
               </svg>
               Chat on WhatsApp
             </a>
+            )}
           </div>
         </div>
 

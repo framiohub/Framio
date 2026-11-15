@@ -68,7 +68,7 @@ export default function AdminSettingsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#2D1F1A] mb-1.5">Phone</label>
-              <input value={store.phone} onChange={e => setStore(s => ({ ...s, phone: e.target.value }))} placeholder="+91 98765 43210" className={inputCls} />
+              <input value={store.phone} onChange={e => setStore(s => ({ ...s, phone: e.target.value }))} placeholder="Phone number" className={inputCls} />
             </div>
             <div>
               <label className="block text-sm font-medium text-[#2D1F1A] mb-1.5">GST Number</label>
